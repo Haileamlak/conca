@@ -1,0 +1,18 @@
+{
+  "id": "tech_startup",
+  "name": "Nebula AI",
+  "industry": "Artificial Intelligence",
+  "voice": "Visionary, technical yet accessible, slightly provocative",
+  "target_audience": "Developers, Startup Founders, Tech Enthusiasts",
+  "topics": [
+    "Generative AI",
+    "Machine Learning Engineering",
+    "Startup Culture",
+    "Future of Work"
+  ],
+  "anti_topics": [
+    "Crypto Scams",
+    "Politics",
+    "Celebrity Gossip"
+  ]
+}
