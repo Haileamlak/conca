@@ -147,3 +147,27 @@ func (s *DuckDuckGoSearch) Search(query string) ([]models.Trend, error) {
 
 	return trends, nil
 }
+
+// ResilientSearch tries a primary tool and falls back to a backup on failure.
+type ResilientSearch struct {
+	Primary SearchTool
+	Backup  SearchTool
+}
+
+func NewResilientSearch(primary, backup SearchTool) *ResilientSearch {
+	return &ResilientSearch{Primary: primary, Backup: backup}
+}
+
+func (r *ResilientSearch) Search(query string) ([]models.Trend, error) {
+	fmt.Printf("Searching with primary tool...\n")
+	results, err := r.Primary.Search(query)
+	if err == nil {
+		return results, nil
+	}
+
+	fmt.Printf("Primary search failed (%v). Falling back to backup...\n", err)
+	if r.Backup == nil {
+		return nil, err
+	}
+	return r.Backup.Search(query)
+}

@@ -26,6 +26,7 @@ type SearchResult struct {
 type VectorStore interface {
 	Add(record VectorRecord) error
 	Query(queryVector []float32, topK int) ([]SearchResult, error)
+	UpdateMetadata(id string, metadata map[string]interface{}) error
 }
 
 // LocalVectorStore implements VectorStore using a local JSON file.
@@ -111,4 +112,25 @@ func (l *LocalVectorStore) cosineSimilarity(v1, v2 []float32) float32 {
 		return 0
 	}
 	return float32(dotProduct / (math.Sqrt(normV1) * math.Sqrt(normV2)))
+}
+func (l *LocalVectorStore) UpdateMetadata(id string, metadata map[string]interface{}) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	found := false
+	for i := range l.records {
+		if l.records[i].ID == id {
+			for k, v := range metadata {
+				l.records[i].Metadata[k] = v
+			}
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return os.ErrNotExist
+	}
+
+	return l.save()
 }

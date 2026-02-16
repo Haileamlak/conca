@@ -23,7 +23,7 @@ type GeminiEmbeddingClient struct {
 
 func NewGeminiEmbeddingClient(apiKey, model string) *GeminiEmbeddingClient {
 	if model == "" {
-		model = "text-embedding-004"
+		model = "embedding-001"
 	}
 	return &GeminiEmbeddingClient{
 		APIKey: apiKey,
@@ -50,7 +50,7 @@ type geminiEmbeddingResponse struct {
 }
 
 func (g *GeminiEmbeddingClient) Embed(text string) ([]float32, error) {
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:embedContent?key=%s", g.Model, g.APIKey)
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/%s:embedContent?key=%s", g.Model, g.APIKey)
 
 	reqBody := geminiEmbeddingRequest{}
 	reqBody.Model = "models/" + g.Model

@@ -68,6 +68,15 @@ func (t *TwitterClient) Post(post *models.Post) error {
 		return fmt.Errorf("X API returned error (status %d): %s", resp.StatusCode, string(body))
 	}
 
+	var tweetResp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tweetResp); err == nil {
+		post.SocialID = tweetResp.Data.ID
+	}
+
 	post.Status = models.StatusPublished
 	post.UpdatedAt = time.Now()
 	return nil

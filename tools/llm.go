@@ -23,7 +23,7 @@ type GeminiClient struct {
 
 func NewGeminiClient(apiKey, model string) *GeminiClient {
 	if model == "" {
-		model = "gemini-1.5-flash" // Flash is faster and cheaper/free
+		model = "gemini-2.5-flash" // Flash is faster and cheaper/free
 	}
 	return &GeminiClient{
 		APIKey: apiKey,

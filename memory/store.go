@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 // Store defines the interface for long-term persistence.
@@ -14,6 +15,7 @@ type Store interface {
 	SavePost(post models.Post) error
 	GetHistory(brandID string) ([]models.Post, error)
 	GetAnalytics(brandID string) ([]models.Analytics, error)
+	UpdateAnalytics(brandID string, postID string, analytics models.Analytics) error
 }
 
 // FileStore implements Store using JSON files on disk.
@@ -92,4 +94,40 @@ func (f *FileStore) GetAnalytics(brandID string) ([]models.Analytics, error) {
 		analytics = append(analytics, p.Analytics)
 	}
 	return analytics, nil
+}
+func (f *FileStore) UpdateAnalytics(brandID string, postID string, analytics models.Analytics) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	historyPath := filepath.Join(f.brandPath(brandID), "history.json")
+	data, err := os.ReadFile(historyPath)
+	if err != nil {
+		return err
+	}
+
+	var history []models.Post
+	if err := json.Unmarshal(data, &history); err != nil {
+		return err
+	}
+
+	found := false
+	for i := range history {
+		if history[i].ID == postID {
+			history[i].Analytics = analytics
+			history[i].UpdatedAt = time.Now()
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("post %s not found in history", postID)
+	}
+
+	updatedData, err := json.MarshalIndent(history, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(historyPath, updatedData, 0644)
 }

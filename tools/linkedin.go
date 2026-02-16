@@ -70,6 +70,13 @@ func (l *LinkedInClient) Post(post *models.Post) error {
 		return fmt.Errorf("LinkedIn API returned error (status %d): %s", resp.StatusCode, string(body))
 	}
 
+	var liResp struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&liResp); err == nil {
+		post.SocialID = liResp.ID
+	}
+
 	post.Status = models.StatusPublished
 	post.UpdatedAt = time.Now()
 	return nil

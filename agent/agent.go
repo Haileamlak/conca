@@ -18,9 +18,10 @@ type Agent struct {
 	Store     memory.Store
 	Vector    memory.VectorStore
 	Embedding tools.EmbeddingTool
+	Analytics tools.AnalyticsFetcher
 }
 
-func NewAgent(brand models.BrandProfile, search tools.SearchTool, llm tools.LLMTool, social tools.SocialClient, store memory.Store, vector memory.VectorStore, embedding tools.EmbeddingTool) *Agent {
+func NewAgent(brand models.BrandProfile, search tools.SearchTool, llm tools.LLMTool, social tools.SocialClient, store memory.Store, vector memory.VectorStore, embedding tools.EmbeddingTool, analytics tools.AnalyticsFetcher) *Agent {
 	return &Agent{
 		Brand:     brand,
 		Search:    search,
@@ -29,6 +30,7 @@ func NewAgent(brand models.BrandProfile, search tools.SearchTool, llm tools.LLMT
 		Store:     store,
 		Vector:    vector,
 		Embedding: embedding,
+		Analytics: analytics,
 	}
 }
 
@@ -80,7 +82,6 @@ func (a *Agent) Run() error {
 			break
 		}
 		fmt.Printf("Feedback: %s\n", critique)
-		// Improvement logic: In a real app, we'd pass 'critique' back to Generate
 	}
 
 	if finalPost == nil {
@@ -199,4 +200,70 @@ Provide a critique and a score from 1 to 10. Format: "Critique: [text] Score: [n
 	}
 
 	return response, score, nil
+}
+
+// SyncAnalytics fetches latest performance data for past posts and updates memory.
+func (a *Agent) SyncAnalytics() error {
+	if a.Analytics == nil {
+		return fmt.Errorf("analytics fetcher not configured")
+	}
+
+	history, err := a.Store.GetHistory(a.Brand.ID)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Syncing analytics for %d posts...\n", len(history))
+	for _, p := range history {
+		if p.SocialID == "" {
+			continue
+		}
+
+		fmt.Printf("Fetching metrics for post %s (%s)...\n", p.ID, p.Platform)
+		metrics, err := a.Analytics.Fetch(&p)
+		if err != nil {
+			fmt.Printf("Warning: Failed to fetch metrics for %s: %v\n", p.ID, err)
+			continue
+		}
+
+		// Update both history and vector metadata
+		a.Store.UpdateAnalytics(a.Brand.ID, p.ID, metrics)
+		if a.Vector != nil {
+			a.Vector.UpdateMetadata(p.ID, map[string]interface{}{
+				"likes":    metrics.Likes,
+				"shares":   metrics.Shares,
+				"comments": metrics.Comments,
+				"score":    metrics.Likes + (metrics.Shares * 2), // Simple performance score
+			})
+		}
+	}
+
+	return nil
+}
+
+// Start runs the agent loop autonomously at the specified interval.
+func (a *Agent) Start(interval time.Duration) {
+	fmt.Printf("Agent started in daemon mode. Cycle interval: %v\n", interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	// Run once immediately
+	a.runAndSync()
+
+	for range ticker.C {
+		a.runAndSync()
+	}
+}
+
+func (a *Agent) runAndSync() {
+	fmt.Printf("\n--- [%s] Starting Autonomous Cycle ---\n", time.Now().Format(time.RFC822))
+	if err := a.Run(); err != nil {
+		fmt.Printf("Cycle error: %v\n", err)
+	}
+
+	fmt.Printf("[%s] Syncing analytics...\n", time.Now().Format(time.RFC822))
+	if err := a.SyncAnalytics(); err != nil {
+		fmt.Printf("Sync error: %v\n", err)
+	}
+	fmt.Printf("--- [%s] Cycle Finished ---\n", time.Now().Format(time.RFC822))
 }
