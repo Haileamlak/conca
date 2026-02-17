@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Conca Logo" width="200px">
+  <img src="logo_black.png" alt="Conca Logo" width="200px">
 </p>
 
 **Conca** is a sophisticated, production-grade autonomous agent built in Go, designed to scale from a CLI utility to a comprehensive SaaS platform. It researches trends, generates platform-optimized content, manages multiple brand identities, and optimizes performance using live analytics and semantic memory.
