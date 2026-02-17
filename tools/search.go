@@ -77,6 +77,66 @@ func (n *NewsAPISearch) Search(query string) ([]models.Trend, error) {
 	return trends, nil
 }
 
+// NewsDataSearch implements SearchTool using newsdata.io.
+type NewsDataSearch struct {
+	APIKey string
+	client *http.Client
+}
+
+func NewNewsDataSearch(apiKey string) *NewsDataSearch {
+	return &NewsDataSearch{
+		APIKey: apiKey,
+		client: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
+type newsDataResponse struct {
+	Status  string `json:"status"`
+	Results []struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Link        string `json:"link"`
+	} `json:"results"`
+}
+
+func (n *NewsDataSearch) Search(query string) ([]models.Trend, error) {
+	if n.APIKey == "" {
+		return nil, fmt.Errorf("newsdata key is required")
+	}
+
+	u := fmt.Sprintf("https://newsdata.io/api/1/news?apikey=%s&q=%s", n.APIKey, url.QueryEscape(query))
+
+	resp, err := n.client.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("newsdata error %d", resp.StatusCode)
+	}
+
+	var ndResp newsDataResponse
+	if err := json.NewDecoder(resp.Body).Decode(&ndResp); err != nil {
+		return nil, err
+	}
+
+	var trends []models.Trend
+	for _, res := range ndResp.Results {
+		trends = append(trends, models.Trend{
+			Query:     query,
+			Title:     res.Title,
+			Snippet:   res.Description,
+			URL:       res.Link,
+			Timestamp: time.Now(),
+		})
+	}
+
+	return trends, nil
+}
+
 // DuckDuckGoSearch implements SearchTool using HTML scraping.
 type DuckDuckGoSearch struct {
 	client *http.Client

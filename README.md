@@ -1,91 +1,99 @@
-# Autonomous Content Creator Agent 🚀
+<p align="center">
+  <img src="logo.png" alt="Conca Logo" width="200px">
+</p>
 
-A production-ready AI agent built in Go that autonomously researches trends, generates platform-optimized content, maintains brand memory, and synchronizes live performance analytics.
+# Conca
+### The Autonomous Content Engine for Modern Brands
 
-## 🌟 Key Features
+**Conca** is a sophisticated, production-grade autonomous agent built in Go, designed to scale from a CLI utility to a comprehensive SaaS platform. It researches trends, generates platform-optimized content, manages multiple brand identities, and optimizes performance using live analytics and semantic memory.
 
-- **Autonomous Loop**: `Research` -> `Plan` -> `Generate` -> `Evaluate` -> `Post`.
-- **Resilient Research**: Dual-provider trend discovery using NewsAPI with an automatic HTML-scraping fallback to DuckDuckGo.
-- **Brand Memory (RAG)**: Maintains a local vector store (semantic memory) to ensure brand consistency and learn from past successful posts.
-- **Multi-Platform Support**: Internal clients for **Twitter/X (v2)** and **LinkedIn (ugcPosts)**.
-- **Live Analytics loop**: Automatically fetches likes, shares, and comments to update its internal "performance score."
-- **Daemon Mode**: Run as a background service with configurable intervals.
-- **Self-Critique**: Integrated evaluation step where the agent critiques its own drafts against brand voice guidelines before publishing.
+---
 
-## 🏗 Architecture
+## Key Capabilities
 
-The project follows a pragmatic, flat package structure designed for rapid iteration:
+- **Autonomous Agent Loop**: A complete `Plan -> Generate -> Evaluate -> Publish` cycle that operates without human intervention.
+- **SaaS-Ready API**: A robust HTTP API powered by Chi, featuring JWT authentication and multi-tenant isolation.
+- **Enterprise-Grade Storage**: Flexible data layer supporting **PostgreSQL** for massive scale or local JSON files for rapid development.
+- **Semantic Memory (RAG)**: Uses Gemini Embeddings and a local Vector Store to learn from past successes and maintain brand consistency semantically.
+- **Resilient Trend Research**: Leverages **NewsAPI**, **NewsData.io**, and **DuckDuckGo** scrapers to find what's viral NOW.
+- **Live Analytics Optimization**: Automatically tracks engagement metrics (likes, shares, comments) to update internal performance scores.
+- **Multi-Platform Posting**: Direct integrations with **Twitter/X (v2)** and **LinkedIn (ugcPosts)**.
 
-- `cmd/`: Entry point and CLI orchestration.
-- `agent/`: Core autonomous logic and cycle management.
-- `tools/`: External integrations (LLM, Search, Social, Analytics, Embeddings).
-- `memory/`: Persistence layers (File-based history and Local Vector Store).
-- `models/`: Shared data structures.
+---
 
-## 🚦 Getting Started
+## High-Level Architecture
+
+The system is built on a pragmatic, flat package structure designed for high velocity and low technical debt:
+
+- `/api`: RESTful handlers, JWT middleware, and server orchestration.
+- `/agent`: The "Brain" – core autonomous logic and the planning loop.
+- `/tools`: Heavy-lifters (LLM, Search Engines, Social Clients, Analytics).
+- `/memory`: Dual-layer persistence (Relational via Postgres/Files + Semantic via Vector DB).
+- `/cmd/server`: The SaaS gateway.
+- `/cmd/cli`: The developer's power tool.
+
+---
+
+## Getting Started
 
 ### Prerequisites
-
-- Go 1.21+
-- [Gemini API Key](https://aistudio.google.com/app/apikey) (Required for LLM and Embeddings)
-- (Optional) NewsAPI Key, X API Credentials, LinkedIn Access Token.
+- **Go 1.21+**
+- **Gemini API Key** (Required for LLM & Embeddings)
+- **PostgreSQL** (Optional, falls back to JSON)
 
 ### Installation
-
 ```bash
 git clone https://github.com/Haileamlak/ai-content-creator-agent.git
 cd ai-content-creator-agent
 go mod download
 ```
 
-### Configuration
-
-Create or modify a brand profile in `config/`:
-
-```json
-{
-  "id": "tech_startup",
-  "name": "Nebula AI",
-  "industry": "Enterprise AI",
-  "voice": "Professional, visionary, yet pragmatic",
-  "target_audience": "CTOs and Engineering Leaders"
-}
-```
-
-### Environment Variables
-
+### Environment Configuration
+Create a `.env` file or export the following:
 ```bash
 export GEMINI_API_KEY="your-key"
-# Optional
-export NEWSAPI_KEY="your-key"
-export TWITTER_API_KEY="your-key"
-# ... and other social credentials
+export DATABASE_URL="postgres://user:pass@localhost:5432/dbname" # Optional
+export JWT_SECRET="your-secure-secret"
 ```
 
-## 🛠 Usage
+---
 
-### Single Run
-Executes one cycle (Research -> Post -> Save).
+## Multi-Mode Operation
+
+### 1. SaaS Mode (HTTP API)
+Run the agent as a multi-tenant service:
 ```bash
-go run cmd/main.go --config config/tech_startup.json
+go run cmd/server/main.go --port 8080
 ```
+**Available Endpoints:**
+* `POST /api/auth/register` - Create a user account
+* `POST /api/brands` - Define a new brand voice/industry
+* `POST /api/brands/{id}/run` - Trigger an autonomous content cycle
+* `GET /api/brands/{id}/posts` - Review post history and analytics
 
-### Daemon Mode
-Starts the agent in autonomous mode, running every 4 hours.
+### 2. Daemon Mode (CLI)
+Continuous background operation for a specific brand:
 ```bash
-go run cmd/main.go --daemon --interval 4h
+go run cmd/main.go --config config/tech_startup.json --daemon --interval 4h
 ```
 
-### Analytics Sync
-Manually update performance metrics for all past posts.
+### 3. Analytics Synchronization
+Sync performance data from social platforms to local memory:
 ```bash
 go run cmd/main.go --sync
 ```
 
-## 📈 Performance Tracking
+---
 
-The agent stores analytics in `data/{brand_id}/history.json` and updates the vector index metadata. This allows the planning phase to semantically retrieve "what worked before" based on real engagement data.
+## The Vision: Scaling Conca to a $1B Company
 
-## 📜 License
+Conca is built as the foundation for a platform that replaces the traditional social media agency. 
 
+**Current Phase**: CLI tool & Core SaaS API Foundation (DONE ✅).
+**Phase 2**: Multi-tenant database, Job queues, and Dashboard (IN PROGRESS 🏗).
+**Phase 3**: A/B testing engine, Visual content generation, and Enterprise approval workflows.
+
+---
+
+## License
 MIT License - see [LICENSE](LICENSE) for details.

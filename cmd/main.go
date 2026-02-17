@@ -11,7 +11,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -35,6 +38,7 @@ func main() {
 	}
 
 	// 2. Initialize Tools
+	godotenv.Load()
 	var search tools.SearchTool
 	ddg := tools.NewDuckDuckGoSearch()
 
@@ -45,10 +49,13 @@ func main() {
 		}
 		search = ddg
 	} else {
-		// Use Resilient Search (NewsAPI -> DDG fallback)
-		newsAPI := tools.NewNewsAPISearch(apiKey)
-		search = tools.NewResilientSearch(newsAPI, ddg)
-		fmt.Println("Initial search configured with NewsAPI (resilient mode).")
+		var primary tools.SearchTool
+		if strings.HasPrefix(apiKey, "pub_") {
+			primary = tools.NewNewsDataSearch(apiKey)
+		} else {
+			primary = tools.NewNewsAPISearch(apiKey)
+		}
+		search = tools.NewResilientSearch(primary, ddg)
 	}
 
 	geminiKey := os.Getenv("GEMINI_API_KEY")
@@ -56,44 +63,46 @@ func main() {
 		log.Fatal("GEMINI_API_KEY environment variable is required.")
 	}
 	llm := tools.NewGeminiClient(geminiKey, "gemini-2.5-flash")
-	embedding := tools.NewGeminiEmbeddingClient(geminiKey, "text-embedding-004")
+	embedding := tools.NewGeminiEmbeddingClient(geminiKey, "gemini-embedding-001")
 
 	// Multi-Social Client
 	social := tools.NewMultiSocialClient()
-	// Multi-Analytics Fetcher
 	analytics := &tools.MultiAnalyticsFetcher{Fetchers: make(map[string]tools.AnalyticsFetcher)}
 
 	twitterKey := os.Getenv("TWITTER_API_KEY")
 	if twitterKey != "" {
-		twitterClient := tools.NewTwitterClient(
-			twitterKey,
-			os.Getenv("TWITTER_API_SECRET"),
-			os.Getenv("TWITTER_ACCESS_TOKEN"),
-			os.Getenv("TWITTER_ACCESS_SECRET"),
-		)
-		social.AddClient("twitter", twitterClient)
-		analytics.Fetchers["twitter"] = &tools.TwitterAnalyticsFetcher{Client: twitterClient}
-		fmt.Println("Twitter client and analytics integrated.")
+		tc := tools.NewTwitterClient(twitterKey, os.Getenv("TWITTER_API_SECRET"), os.Getenv("TWITTER_ACCESS_TOKEN"), os.Getenv("TWITTER_ACCESS_SECRET"))
+		social.AddClient("twitter", tc)
+		analytics.Fetchers["twitter"] = &tools.TwitterAnalyticsFetcher{Client: tc}
 	}
 
 	linkedInToken := os.Getenv("LINKEDIN_ACCESS_TOKEN")
 	if linkedInToken != "" {
-		linkedInClient := tools.NewLinkedInClient(
-			linkedInToken,
-			os.Getenv("LINKEDIN_PERSON_URN"),
-		)
-		social.AddClient("linkedin", linkedInClient)
-		analytics.Fetchers["linkedin"] = &tools.LinkedInAnalyticsFetcher{Client: linkedInClient}
-		fmt.Println("LinkedIn client and analytics integrated.")
+		lc := tools.NewLinkedInClient(linkedInToken, os.Getenv("LINKEDIN_PERSON_URN"))
+		social.AddClient("linkedin", lc)
+		analytics.Fetchers["linkedin"] = &tools.LinkedInAnalyticsFetcher{Client: lc}
 	}
 
-	// Fallback to Mock if no real clients added
 	if len(social.Clients) == 0 {
-		fmt.Println("Using MockSocialClient (no real credentials found).")
 		social.AddClient("mock", &tools.MockSocialClient{Platform: "Mock"})
 	}
 
-	store := memory.NewFileStore("data")
+	// --- Database Selection ---
+	var store memory.Store
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL != "" {
+		pgStore, err := memory.NewPostgresStore(dbURL)
+		if err != nil {
+			log.Fatalf("Failed to connect to PostgreSQL: %v", err)
+		}
+		defer pgStore.Close()
+		store = pgStore
+		fmt.Println("✅ CLI using PostgreSQL database.")
+	} else {
+		store = memory.NewFileStore("data")
+		fmt.Println("📁 CLI using local JSON files.")
+	}
+
 	vector := memory.NewLocalVectorStore(filepath.Join("data", brand.ID, "vectors.json"))
 
 	// 3. Initialize Agent

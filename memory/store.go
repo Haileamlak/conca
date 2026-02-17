@@ -12,10 +12,21 @@ import (
 
 // Store defines the interface for long-term persistence.
 type Store interface {
+	// Posts
 	SavePost(post models.Post) error
 	GetHistory(brandID string) ([]models.Post, error)
 	GetAnalytics(brandID string) ([]models.Analytics, error)
 	UpdateAnalytics(brandID string, postID string, analytics models.Analytics) error
+
+	// Brands
+	SaveBrand(brand models.BrandProfile, userID string) error
+	GetBrand(id string) (models.BrandProfile, string, error) // Returns brand + userID
+	ListBrands(userID string) ([]models.BrandProfile, error)
+	DeleteBrand(id string) error
+
+	// User management
+	CreateUser(email, passwordHash string) (string, error)
+	GetUserByEmail(email string) (string, string, error) // Returns userID, passwordHash, error
 }
 
 // FileStore implements Store using JSON files on disk.
@@ -130,4 +141,61 @@ func (f *FileStore) UpdateAnalytics(brandID string, postID string, analytics mod
 	}
 
 	return os.WriteFile(historyPath, updatedData, 0644)
+}
+
+// --- Brand Management (FileStore Impl) ---
+
+func (f *FileStore) SaveBrand(brand models.BrandProfile, userID string) error {
+	path := filepath.Join(f.BaseDir, brand.ID)
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return err
+	}
+	configPath := filepath.Join(path, "config.json")
+	data, _ := json.MarshalIndent(brand, "", "  ")
+	return os.WriteFile(configPath, data, 0644)
+}
+
+func (f *FileStore) GetBrand(id string) (models.BrandProfile, string, error) {
+	configPath := filepath.Join(f.BaseDir, id, "config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return models.BrandProfile{}, "", err
+	}
+	var brand models.BrandProfile
+	if err := json.Unmarshal(data, &brand); err != nil {
+		return models.BrandProfile{}, "", err
+	}
+	return brand, "local-user", nil
+}
+
+func (f *FileStore) ListBrands(userID string) ([]models.BrandProfile, error) {
+	entries, err := os.ReadDir(f.BaseDir)
+	if err != nil {
+		return nil, err
+	}
+	var brands []models.BrandProfile
+	for _, entry := range entries {
+		if entry.IsDir() {
+			brand, _, err := f.GetBrand(entry.Name())
+			if err == nil {
+				brands = append(brands, brand)
+			}
+		}
+	}
+	return brands, nil
+}
+
+func (f *FileStore) DeleteBrand(id string) error {
+	path := filepath.Join(f.BaseDir, id)
+	return os.RemoveAll(path)
+}
+
+// --- User Management (FileStore Impl) ---
+
+func (f *FileStore) CreateUser(email, passwordHash string) (string, error) {
+	return "", fmt.Errorf("user management not supported in FileStore")
+}
+
+func (f *FileStore) GetUserByEmail(email string) (string, string, error) {
+	return "", "", fmt.Errorf("user management not supported in FileStore")
 }

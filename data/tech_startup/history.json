@@ -32,5 +32,124 @@
     },
     "created_at": "2026-02-16T23:37:05.122932346+03:00",
     "updated_at": "2026-02-16T23:37:05.122964682+03:00"
+  },
+  {
+    "id": "post-1771274537",
+    "social_id": "",
+    "brand_id": "tech_startup",
+    "topic": "Scaling Generative AI: From Experimentation to Enterprise-Wide Impact",
+    "content": "The GenAI revolution is past the 'wow' phase. We've seen incredible experiments, mind-bending demos, and countless promising PoCs. But here’s the critical question for every founder and tech leader: are those proofs-of-concept truly ready to power your entire enterprise, drive tangible ROI, and reshape your industry?\n\nMoving Generative AI from an exciting lab project to a mission-critical component isn't just about throwing more compute at the problem. It demands scalable infrastructure, robust governance, seamless integration, and a clear path to measurable business impact. This isn't a technical hurdle; it's a strategic imperative.\n\nAt Nebula AI, we believe the true potential of GenAI lies not in its initial spark, but in its enterprise-wide inferno. It's time to stop experimenting and start deploying with purpose. Where are you on the journey from PoC to enterprise powerhouse?\n\n#GenerativeAI #EnterpriseAI #AIScaling #DigitalTransformation #AIStrategy #TechInnovation #NebulaAI #FutureofAI",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-16T23:42:17.800266337+03:00",
+    "updated_at": "2026-02-16T23:42:17.80029258+03:00"
+  },
+  {
+    "id": "post-1771342372",
+    "social_id": "",
+    "brand_id": "tech_startup",
+    "topic": "Beyond Ethics: Navigating AI's Evolving Risk Landscape for Sustainable Growth",
+    "content": "The conversation around AI ethics is vital, but it’s just the starting line. As AI permeates every sector, we must look beyond basic fairness and confront a far more intricate risk landscape for sustainable growth.\n\nAre you prepared for challenges like model drift creating unexpected liabilities, the complexities of data provenance impacting regulatory compliance, or the systemic risks embedded in large-scale deployments? Ignoring these isn't an ethical oversight; it's a strategic vulnerability that can derail innovation and erode public trust.\n\nFor developers and founders, understanding this evolving terrain – from operational resilience to unforeseen societal impacts – isn't optional. It's the difference between building AI that merely functions, and building AI that truly endures and delivers value long-term. At Nebula AI, we champion moving past reactive fixes to proactive governance, empowering you to architect future-proof AI.\n\n#AIStrategy #RiskManagement #SustainableAI #AIGovernance #TechInnovation #FutureOfAI #AIResponsibility #NebulaAI",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-17T18:32:52.945634995+03:00",
+    "updated_at": "2026-02-17T18:32:52.945662969+03:00"
+  },
+  {
+    "id": "post-1771342857",
+    "social_id": "",
+    "brand_id": "tech_startup",
+    "topic": "Mark Cuban's Bold Prediction: Why AI Implementation Skills Are Your Hottest Asset for 2026",
+    "content": "Mark Cuban just dropped a truth bomb: By 2026, proficiency in AI *implementation* will be your single hottest asset. And he's spot on. The era of simply building theoretical AI models is giving way to a new frontier: practical, scalable, and impactful integration.\n\nIt's no longer enough to understand algorithms; the real value and scarcity lie in bridging the gap between cutting-edge AI research and tangible business outcomes. Companies are drowning in data and AI proofs-of-concept, but starving for engineers, product managers, and leaders who can actually deploy, manage, and optimize AI solutions within existing infrastructure and workflows.\n\nThis isn't just about writing code; it's about problem-solving, strategic thinking, and understanding the entire lifecycle of an AI system from ideation to real-world impact. Are you ready to move beyond the whiteboard and into the operational trenches? The market isn't waiting for 2026; the demand for these skills is accelerating *now*. Pivot your focus, or risk being left behind.\n\n#AI #MarkCuban #AIskills #FutureOfWork #TechJobs #AIimplementation #Developers #StartupFounder #CareerGrowth #NebulaAI",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-17T18:40:57.110605188+03:00",
+    "updated_at": "2026-02-17T18:40:57.110627323+03:00"
+  },
+  {
+    "id": "post-1771356281",
+    "social_id": "",
+    "brand_id": "tech_startup",
+    "topic": "AI-Powered Wearables: Driving the Future of Personal Health Monitoring",
+    "content": "**Social Media Post: AI-Powered Wearables**\n\nForget reactive medicine. The future of health isn't in waiting for symptoms – it's in intelligent anticipation. AI-powered wearables are moving beyond simple tracking, becoming sophisticated personal health co-pilots that are set to redefine how we understand and manage our well-being.\n\nImagine a device that doesn't just collect data, but *understands* the subtle patterns within it. Through advanced machine learning, these wearables will predict potential health issues *before* they manifest, offer proactive personalized interventions, and even adapt to your unique physiological responses. This isn't just about longer lives; it's about smarter, healthier living driven by actionable, real-time intelligence.\n\nThe paradigm shift is here. Are you a developer or founder ready to build the next generation of predictive, proactive healthcare? The revolution in personal monitoring is smarter than ever.\n\n#AI #Wearables #HealthTech #FutureOfHealth #PersonalHealth #AIinHealth #MedTech #Innovation #TechForGood #PredictiveHealthcare #NebulaAI",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-17T22:24:41.230183258+03:00",
+    "updated_at": "2026-02-17T22:24:41.230203933+03:00"
+  },
+  {
+    "id": "post-1771356876",
+    "social_id": "",
+    "brand_id": "tech_startup",
+    "topic": "AI's Next Frontier: The Rapid Expansion of Document Analytics in a Digitally Transformed World",
+    "content": "The digital world promised efficiency. What it delivered was an unprecedented deluge of unstructured data – documents. From contracts to reports, emails to knowledge bases, organizations are drowning in information, yet starving for insight.\n\nThe next frontier isn't just digitizing paper; it's about intelligent comprehension at scale. Traditional methods are failing to keep pace with the sheer volume and complexity. This isn't just about OCR; it's AI that understands context, identifies hidden relationships, predicts outcomes, and surfaces critical risks buried deep within your data.\n\nAt Nebula AI, we believe the true competitive advantage now lies in transforming these vast document repositories from static archives into dynamic, actionable intelligence. Are you still using human-scale analysis in an AI-scale world? You’re leaving immense value – and vital insights – on the table. It’s time to unlock the intelligence your documents already hold.\n\n#AIDocumentAnalytics #UnstructuredData #AIRevolution #DigitalTransformation #NebulaAI #DataScience #MachineLearning #TechInnovation",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-17T22:34:36.773974738+03:00",
+    "updated_at": "2026-02-17T22:34:36.774002235+03:00"
+  },
+  {
+    "id": "post-1771356920",
+    "social_id": "",
+    "brand_id": "tech_startup",
+    "topic": "The AI Revolution in Health Insurance: Scaling to a $3.5 Trillion Market by 2034",
+    "content": "The future of health insurance isn't just coming – it's already here, powered by AI. We're talking about a seismic shift poised to scale this market to a staggering $3.5 TRILLION by 2034.\n\nThis isn't merely growth; it's a complete re-architecture of a foundational industry. From hyper-personalized risk assessment and proactive fraud detection to predictive health interventions and seamless claims processing, AI is transforming opaque, reactive systems into transparent, proactive, and truly patient-centric models.\n\nThink about it: AI can unlock unprecedented efficiencies, lower costs, and offer truly individualized plans that were once impossible. Are incumbents ready for this tsunami of innovation, or will new AI-native disruptors carve out their lion's share?\n\nThe question isn't *if* AI will dominate health insurance, but *who* will build the intelligent infrastructure for this new era. Are you building it, or just watching it unfold?\n\n#AIinHealthcare #HealthInsurance #FutureofAI #TechRevolution #AIstartup #DigitalHealth #Insurtech #NebulaAI",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-17T22:35:20.053140472+03:00",
+    "updated_at": "2026-02-17T22:35:20.053165943+03:00"
+  },
+  {
+    "id": "post-1771359301",
+    "social_id": "",
+    "brand_id": "tech_startup",
+    "topic": "AI-Powered Medical Scheduling: A $1.45 Billion Market Reshaping Healthcare Efficiency and Patient Experience",
+    "content": "The $1.45 billion market for AI-powered medical scheduling isn't just a statistic; it's a seismic shift demanding our attention. The era of frustrating phone trees, endless holds, and inefficient booking systems is rapidly drawing to a close.\n\nImagine a healthcare system where AI orchestrates every appointment with precision: leveraging sophisticated algorithms and predictive analytics to minimize no-shows, dynamically optimize clinician schedules, and personalize patient journeys from their first interaction. This isn't just about booking; it's about transforming operational bottlenecks into seamless, empathetic experiences that free up staff and empower patients.\n\nThe opportunity to innovate within this burgeoning market is immense. Are we truly maximizing our healthcare resources without these intelligent systems? The technology exists to build a future where efficiency and unparalleled patient care go hand-in-hand.\n\nWhat's your vision for AI's next frontier in healthcare scheduling?\n\n#AIinHealthcare #MedTech #HealthcareInnovation #FutureOfHealth #AISolutions #StartupLife #Developers #HealthTech #PatientExperience #NebulaAI",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-17T23:15:01.29787146+03:00",
+    "updated_at": "2026-02-17T23:15:01.297892209+03:00"
   }
 ]
