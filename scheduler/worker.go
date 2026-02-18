@@ -5,9 +5,9 @@ import (
 	"content-creator-agent/memory"
 	"content-creator-agent/models"
 	"content-creator-agent/tools"
+	"content-creator-agent/tools/logger"
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 	"time"
 )
@@ -31,21 +31,21 @@ func NewWorker(q Queue, factory AgentFactory) *Worker {
 
 // Start runs the worker loop.
 func (w *Worker) Start(ctx context.Context) {
-	fmt.Println("👷 Worker started. Waiting for jobs...")
+	logger.GlobalBuffer.Info("👷 Worker started. Waiting for jobs...")
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("Worker shutting down...")
+			logger.GlobalBuffer.Info("Worker shutting down...")
 			return
 		case <-w.Quit:
 			return
 		case <-ticker.C:
 			job, err := w.Queue.Dequeue()
 			if err != nil {
-				log.Printf("Worker error dequeuing: %v", err)
+				logger.GlobalBuffer.Error("Worker error dequeuing: %v", err)
 				continue
 			}
 			if job == nil {
@@ -58,11 +58,11 @@ func (w *Worker) Start(ctx context.Context) {
 }
 
 func (w *Worker) Process(job *Job) {
-	fmt.Printf("🚀 Processing job %d (Brand: %s, Type: %s)\n", job.ID, job.BrandID, job.Type)
+	logger.GlobalBuffer.Info("🚀 Processing job %d (Brand: %s, Type: %s)", job.ID, job.BrandID, job.Type)
 
 	agentInstance, err := w.AgentFactory(job.BrandID)
 	if err != nil {
-		log.Printf("Worker failed to create agent for brand %s: %v", job.BrandID, err)
+		logger.GlobalBuffer.Error("Worker failed to create agent for brand %s: %v", job.BrandID, err)
 		w.Queue.Fail(job.ID, err.Error(), false)
 		return
 	}
@@ -99,12 +99,12 @@ func (w *Worker) Process(job *Job) {
 	}
 
 	if runErr != nil {
-		log.Printf("Job %d failed: %v", job.ID, runErr)
+		logger.GlobalBuffer.Error("Job %d failed: %v", job.ID, runErr)
 		// Retry if it's the first few failures
 		shouldRetry := job.Retries < 3
 		w.Queue.Fail(job.ID, runErr.Error(), shouldRetry)
 	} else {
-		fmt.Printf("✅ Job %d completed successfully!\n", job.ID)
+		logger.GlobalBuffer.Info("✅ Job %d completed successfully!", job.ID)
 		w.Queue.Ack(job.ID)
 	}
 }

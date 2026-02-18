@@ -1,0 +1,17 @@
+{
+  "id": "u-177144_brown_ai",
+  "user_id": "u-1771447249",
+  "name": "Brown AI",
+  "industry": "Technology",
+  "voice": "Professional",
+  "target_audience": "Software Engineers",
+  "topics": [
+    "AI",
+    "Software"
+  ],
+  "anti_topics": [
+    "Politics",
+    "Food"
+  ],
+  "schedule_interval_hours": 2
+}

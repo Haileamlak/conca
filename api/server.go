@@ -48,15 +48,15 @@ func (s *Server) mountRoutes() {
 	// Public routes
 	r.Post("/api/auth/register", s.Handlers.Register)
 	r.Post("/api/auth/login", s.Handlers.Login)
-	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		JSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
-	r.Get("/api/analytics", s.Handlers.GetGlobalAnalytics)
-	r.Get("/api/posts", s.Handlers.ListGlobalPosts)
+	r.Get("/api/logs", s.Handlers.GetLogs)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(s.AuthMiddleware)
+
+		r.Get("/api/auth/me", s.Handlers.GetMe)
+		r.Get("/api/analytics", s.Handlers.GetGlobalAnalytics)
+		r.Get("/api/posts", s.Handlers.ListGlobalPosts)
 
 		// Brands
 		r.Post("/api/brands", s.Handlers.CreateBrand)
@@ -72,6 +72,7 @@ func (s *Server) mountRoutes() {
 		// Calendar
 		r.Get("/api/brands/{brandID}/calendar/scheduled", s.Handlers.GetScheduledPosts)
 		r.Patch("/api/brands/{brandID}/calendar/status", s.Handlers.UpdateScheduledStatus)
+		r.Put("/api/brands/{brandID}/calendar/post", s.Handlers.UpdateScheduledPost)
 		r.Post("/api/brands/{brandID}/calendar/plan", s.Handlers.TriggerPlan)
 
 		// Posts & Analytics
@@ -101,6 +102,25 @@ func FileServer(r chi.Router, path string, root http.FileSystem) {
 	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
 		rctx := chi.RouteContext(r.Context())
 		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+
+		// If requesting a file that doesn't exist, serve index.html for React routing
+		fsPath := strings.TrimPrefix(r.URL.Path, pathPrefix)
+		if fsPath == "" {
+			fsPath = "index.html"
+		}
+
+		// Check if the file exists on the filesystem
+		f, err := root.Open(fsPath)
+		if err != nil {
+			// Fallback to index.html for SPA routing
+			origPath := r.URL.Path
+			r.URL.Path = "/index.html"
+			http.FileServer(root).ServeHTTP(w, r)
+			r.URL.Path = origPath
+			return
+		}
+		f.Close()
+
 		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
 		fs.ServeHTTP(w, r)
 	})

@@ -15,11 +15,11 @@ type Store interface {
 	// Posts
 	SavePost(post models.Post) error
 	GetHistory(brandID string) ([]models.Post, error)
-	GetGlobalHistory(limit int) ([]models.Post, error)
+	GetGlobalHistory(userID string, limit int) ([]models.Post, error)
 	GetAnalytics(brandID string) ([]models.Analytics, error)
 	UpdateAnalytics(brandID string, postID string, analytics models.Analytics) error
-	GetGlobalAnalytics() (models.GlobalAnalytics, error)
-	GetBrandPerformance() ([]models.BrandPerformance, error)
+	GetGlobalAnalytics(userID string) (models.GlobalAnalytics, error)
+	GetBrandPerformance(userID string) ([]models.BrandPerformance, error)
 
 	// Brands
 	SaveBrand(brand models.BrandProfile, userID string) error
@@ -32,11 +32,13 @@ type Store interface {
 	SaveScheduledPost(post models.ScheduledPost) error
 	GetScheduledPosts(brandID string) ([]models.ScheduledPost, error)
 	UpdateScheduledPostStatus(postID string, status models.PostStatus) error
+	UpdateScheduledPost(postID string, topic, content string) error
 	GetPendingScheduledPosts() ([]models.ScheduledPost, error) // For the scheduler to publish
 
 	// User management
 	CreateUser(email, passwordHash string) (string, error)
-	GetUserByEmail(email string) (string, string, error) // Returns userID, passwordHash, error
+	GetUserByEmail(email string) (*models.User, error)
+	GetUserByID(id string) (*models.User, error)
 }
 
 // FileStore implements Store using JSON files on disk.
@@ -103,8 +105,8 @@ func (f *FileStore) GetHistory(brandID string) ([]models.Post, error) {
 	return history, nil
 }
 
-func (f *FileStore) GetGlobalHistory(limit int) ([]models.Post, error) {
-	brands, err := f.ListAllBrands()
+func (f *FileStore) GetGlobalHistory(userID string, limit int) ([]models.Post, error) {
+	brands, err := f.ListBrands(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +175,8 @@ func (f *FileStore) UpdateAnalytics(brandID string, postID string, analytics mod
 	return os.WriteFile(historyPath, updatedData, 0644)
 }
 
-func (f *FileStore) GetGlobalAnalytics() (models.GlobalAnalytics, error) {
-	brands, err := f.ListAllBrands()
+func (f *FileStore) GetGlobalAnalytics(userID string) (models.GlobalAnalytics, error) {
+	brands, err := f.ListBrands(userID)
 	if err != nil {
 		return models.GlobalAnalytics{}, err
 	}
@@ -192,8 +194,8 @@ func (f *FileStore) GetGlobalAnalytics() (models.GlobalAnalytics, error) {
 	return global, nil
 }
 
-func (f *FileStore) GetBrandPerformance() ([]models.BrandPerformance, error) {
-	brands, err := f.ListAllBrands()
+func (f *FileStore) GetBrandPerformance(userID string) ([]models.BrandPerformance, error) {
+	brands, err := f.ListBrands(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -236,6 +238,7 @@ func (f *FileStore) GetBrandPerformance() ([]models.BrandPerformance, error) {
 // --- Brand Management (FileStore Impl) ---
 
 func (f *FileStore) SaveBrand(brand models.BrandProfile, userID string) error {
+	brand.UserID = userID
 	path := filepath.Join(f.BaseDir, brand.ID)
 	if err := os.MkdirAll(path, 0755); err != nil {
 		return err
@@ -255,11 +258,21 @@ func (f *FileStore) GetBrand(id string) (models.BrandProfile, string, error) {
 	if err := json.Unmarshal(data, &brand); err != nil {
 		return models.BrandProfile{}, "", err
 	}
-	return brand, "local-user", nil
+	return brand, brand.UserID, nil
 }
 
 func (f *FileStore) ListBrands(userID string) ([]models.BrandProfile, error) {
-	return f.ListAllBrands()
+	all, err := f.ListAllBrands()
+	if err != nil {
+		return nil, err
+	}
+	var filtered []models.BrandProfile
+	for _, b := range all {
+		if b.UserID == userID {
+			filtered = append(filtered, b)
+		}
+	}
+	return filtered, nil
 }
 
 func (f *FileStore) ListAllBrands() ([]models.BrandProfile, error) {
@@ -284,30 +297,136 @@ func (f *FileStore) DeleteBrand(id string) error {
 	return os.RemoveAll(path)
 }
 
-// Calendar Stubs for FileStore
-func (f *FileStore) SaveScheduledPost(post models.ScheduledPost) error { return nil }
+// --- Calendar & Approval (FileStore Impl) ---
+
+func (f *FileStore) SaveScheduledPost(post models.ScheduledPost) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	path := f.brandPath(post.BrandID)
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return err
+	}
+
+	calendarPath := filepath.Join(path, "calendar.json")
+	var calendar []models.ScheduledPost
+
+	data, err := os.ReadFile(calendarPath)
+	if err == nil {
+		json.Unmarshal(data, &calendar)
+	}
+
+	calendar = append(calendar, post)
+	updatedData, _ := json.MarshalIndent(calendar, "", "  ")
+	return os.WriteFile(calendarPath, updatedData, 0644)
+}
+
 func (f *FileStore) GetScheduledPosts(brandID string) ([]models.ScheduledPost, error) {
-	return nil, nil
+	calendarPath := filepath.Join(f.brandPath(brandID), "calendar.json")
+	data, err := os.ReadFile(calendarPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []models.ScheduledPost{}, nil
+		}
+		return nil, err
+	}
+
+	var calendar []models.ScheduledPost
+	if err := json.Unmarshal(data, &calendar); err != nil {
+		return nil, err
+	}
+	return calendar, nil
 }
+
 func (f *FileStore) UpdateScheduledPostStatus(postID string, status models.PostStatus) error {
-	return nil
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	brands, _ := f.ListAllBrands()
+	for _, b := range brands {
+		calendarPath := filepath.Join(f.brandPath(b.ID), "calendar.json")
+		data, err := os.ReadFile(calendarPath)
+		if err != nil {
+			continue
+		}
+
+		var calendar []models.ScheduledPost
+		json.Unmarshal(data, &calendar)
+
+		found := false
+		for i := range calendar {
+			if calendar[i].ID == postID {
+				calendar[i].Status = status
+				calendar[i].UpdatedAt = time.Now()
+				found = true
+				break
+			}
+		}
+
+		if found {
+			updatedData, _ := json.MarshalIndent(calendar, "", "  ")
+			return os.WriteFile(calendarPath, updatedData, 0644)
+		}
+	}
+	return fmt.Errorf("scheduled post %s not found", postID)
 }
-func (f *FileStore) GetPendingScheduledPosts() ([]models.ScheduledPost, error) { return nil, nil }
+
+func (f *FileStore) UpdateScheduledPost(postID string, topic, content string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	brands, _ := f.ListAllBrands()
+	for _, b := range brands {
+		calendarPath := filepath.Join(f.brandPath(b.ID), "calendar.json")
+		data, err := os.ReadFile(calendarPath)
+		if err != nil {
+			continue
+		}
+
+		var calendar []models.ScheduledPost
+		json.Unmarshal(data, &calendar)
+
+		found := false
+		for i := range calendar {
+			if calendar[i].ID == postID {
+				calendar[i].Topic = topic
+				calendar[i].Content = content
+				calendar[i].UpdatedAt = time.Now()
+				found = true
+				break
+			}
+		}
+
+		if found {
+			updatedData, _ := json.MarshalIndent(calendar, "", "  ")
+			return os.WriteFile(calendarPath, updatedData, 0644)
+		}
+	}
+	return fmt.Errorf("scheduled post %s not found", postID)
+}
+
+func (f *FileStore) GetPendingScheduledPosts() ([]models.ScheduledPost, error) {
+	brands, _ := f.ListAllBrands()
+	var pending []models.ScheduledPost
+	for _, b := range brands {
+		posts, _ := f.GetScheduledPosts(b.ID)
+		for _, p := range posts {
+			if p.Status == models.StatusScheduled && p.ScheduledAt.Before(time.Now()) {
+				pending = append(pending, p)
+			}
+		}
+	}
+	return pending, nil
+}
 
 // --- User Management (FileStore Impl) ---
-
-type fileUser struct {
-	ID           string `json:"id"`
-	Email        string `json:"email"`
-	PasswordHash string `json:"password_hash"`
-}
 
 func (f *FileStore) CreateUser(email, passwordHash string) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	usersPath := filepath.Join(f.BaseDir, "users.json")
-	var users []fileUser
+	var users []models.User
 
 	data, err := os.ReadFile(usersPath)
 	if err == nil {
@@ -321,7 +440,7 @@ func (f *FileStore) CreateUser(email, passwordHash string) (string, error) {
 	}
 
 	userID := fmt.Sprintf("u-%d", time.Now().Unix())
-	users = append(users, fileUser{
+	users = append(users, models.User{
 		ID:           userID,
 		Email:        email,
 		PasswordHash: passwordHash,
@@ -333,21 +452,40 @@ func (f *FileStore) CreateUser(email, passwordHash string) (string, error) {
 	return userID, nil
 }
 
-func (f *FileStore) GetUserByEmail(email string) (string, string, error) {
+func (f *FileStore) GetUserByEmail(email string) (*models.User, error) {
 	usersPath := filepath.Join(f.BaseDir, "users.json")
 	data, err := os.ReadFile(usersPath)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 
-	var users []fileUser
+	var users []models.User
 	json.Unmarshal(data, &users)
 
 	for _, u := range users {
 		if u.Email == email {
-			return u.ID, u.PasswordHash, nil
+			return &u, nil
 		}
 	}
 
-	return "", "", fmt.Errorf("user not found")
+	return nil, fmt.Errorf("user not found")
+}
+
+func (f *FileStore) GetUserByID(id string) (*models.User, error) {
+	usersPath := filepath.Join(f.BaseDir, "users.json")
+	data, err := os.ReadFile(usersPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var users []models.User
+	json.Unmarshal(data, &users)
+
+	for _, u := range users {
+		if u.ID == id {
+			return &u, nil
+		}
+	}
+
+	return nil, fmt.Errorf("user not found")
 }

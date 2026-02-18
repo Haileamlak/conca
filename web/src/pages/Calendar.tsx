@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -6,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { api } from "@/lib/api";
+import { Layout } from "@/components/Layout";
 
 interface ScheduledPost {
     id: string;
@@ -41,10 +42,10 @@ export default function Calendar() {
 
     const fetchBrands = async () => {
         try {
-            const res = await fetch("/api/brands");
+            const res = await api.get("/brands");
             const data = await res.json();
-            setBrands(data);
-            if (data.length > 0) setSelectedBrand(data[0].id);
+            setBrands(data || []);
+            if (data?.length > 0) setSelectedBrand(data[0].id);
         } catch (error) {
             console.error("Failed to fetch brands", error);
         }
@@ -52,7 +53,7 @@ export default function Calendar() {
 
     const fetchScheduledPosts = async () => {
         try {
-            const res = await fetch(`/api/brands/${selectedBrand}/calendar/scheduled`);
+            const res = await api.get(`/brands/${selectedBrand}/calendar/scheduled`);
             const data = await res.json();
             setPosts(data || []);
         } catch (error) {
@@ -62,9 +63,7 @@ export default function Calendar() {
 
     const handlePlanBatch = async () => {
         try {
-            const res = await fetch(`/api/brands/${selectedBrand}/calendar/plan`, {
-                method: "POST",
-            });
+            const res = await api.post(`/brands/${selectedBrand}/calendar/plan`);
             if (res.ok) {
                 toast({
                     title: "Planning Started",
@@ -99,10 +98,10 @@ export default function Calendar() {
                                     <div
                                         key={post.id}
                                         className={`p-2 rounded text-xs border ${post.status === "published"
-                                                ? "bg-green-500/10 border-green-500/20 text-green-500"
-                                                : post.status === "approved"
-                                                    ? "bg-blue-500/10 border-blue-500/20 text-blue-500"
-                                                    : "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
+                                            ? "bg-green-500/10 border-green-500/20 text-green-500"
+                                            : post.status === "approved"
+                                                ? "bg-blue-500/10 border-blue-500/20 text-blue-500"
+                                                : "bg-yellow-500/10 border-yellow-500/20 text-yellow-500"
                                             }`}
                                     >
                                         <div className="font-semibold truncate">{post.topic}</div>
@@ -120,31 +119,30 @@ export default function Calendar() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Content Calendar</h2>
-                    <p className="text-muted-foreground">Plan and review your upcoming content strategy.</p>
-                </div>
+        <Layout
+            title="Content Calendar"
+            subtitle="Plan and review your upcoming content strategy."
+            actions={
                 <div className="flex items-center gap-4">
                     <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-[200px] h-9 bg-secondary border-border font-mono text-xs">
                             <SelectValue placeholder="Select Brand" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-popover border-border">
                             {brands.map((b) => (
-                                <SelectItem key={b.id} value={b.id}>
+                                <SelectItem key={b.id} value={b.id} className="text-xs font-mono">
                                     {b.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button onClick={handlePlanBatch}>
-                        <Plus className="mr-2 h-4 w-4" />
+                    <Button size="sm" className="gap-2 font-mono text-xs" onClick={handlePlanBatch} style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}>
+                        <Plus className="w-3.5 h-3.5" />
                         Auto-Plan Week
                     </Button>
                 </div>
-            </div>
+            }
+        >
 
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -177,6 +175,6 @@ export default function Calendar() {
                 </CardHeader>
                 <CardContent className="pt-6">{renderWeekView()}</CardContent>
             </Card>
-        </div>
+        </Layout>
     );
 }

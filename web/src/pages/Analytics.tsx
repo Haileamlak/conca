@@ -20,6 +20,8 @@ interface BrandPerf {
   score: number;
 }
 
+import { api } from "@/lib/api";
+
 export default function Analytics() {
   const [stats, setStats] = useState<GlobalStats>({ total_impressions: 0, total_likes: 0, total_shares: 0, total_comments: 0 });
   const [performance, setPerformance] = useState<BrandPerf[]>([]);
@@ -31,7 +33,7 @@ export default function Analytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch("/api/analytics");
+      const res = await api.get("/analytics");
       const data = await res.json();
       if (data.global) setStats(data.global);
       if (data.performance) setPerformance(data.performance);

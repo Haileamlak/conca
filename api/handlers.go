@@ -5,6 +5,7 @@ import (
 	"content-creator-agent/models"
 	"content-creator-agent/scheduler"
 	"content-creator-agent/tools"
+	"content-creator-agent/tools/logger"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -70,24 +71,35 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, hash, err := h.Store.GetUserByEmail(req.Email)
+	user, err := h.Store.GetUserByEmail(req.Email)
 	if err != nil {
 		Error(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
-	if hashPassword(req.Password) != hash {
+	if hashPassword(req.Password) != user.PasswordHash {
 		Error(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
-	token, err := GenerateToken(userID, req.Email, h.JWTSecret)
+	token, err := GenerateToken(user.ID, user.Email, h.JWTSecret)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to generate token")
 		return
 	}
 
-	JSON(w, http.StatusOK, map[string]string{"token": token, "user_id": userID})
+	JSON(w, http.StatusOK, map[string]string{"token": token, "user_id": user.ID})
+}
+
+func (h *Handlers) GetMe(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserID(r)
+	user, err := h.Store.GetUserByID(userID)
+	if err != nil {
+		Error(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	JSON(w, http.StatusOK, user)
 }
 
 // --- Brand Handlers ---
@@ -257,6 +269,30 @@ func (h *Handlers) UpdateScheduledStatus(w http.ResponseWriter, r *http.Request)
 	JSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
+func (h *Handlers) UpdateScheduledPost(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID      string `json:"id"`
+		Topic   string `json:"topic"`
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.Store.UpdateScheduledPost(req.ID, req.Topic, req.Content); err != nil {
+		Error(w, http.StatusInternalServerError, "failed to update post")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func (h *Handlers) GetLogs(w http.ResponseWriter, r *http.Request) {
+	entries := logger.GlobalBuffer.GetEntries()
+	JSON(w, http.StatusOK, entries)
+}
+
 func (h *Handlers) ListPosts(w http.ResponseWriter, r *http.Request) {
 	brandID := chi.URLParam(r, "brandID")
 	posts, err := h.Store.GetHistory(brandID)
@@ -278,7 +314,8 @@ func (h *Handlers) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) ListGlobalPosts(w http.ResponseWriter, r *http.Request) {
-	posts, err := h.Store.GetGlobalHistory(0) // 0 means no limit
+	userID := GetUserID(r)
+	posts, err := h.Store.GetGlobalHistory(userID, 0) // 0 means no limit
 	if err != nil {
 		JSON(w, http.StatusOK, []models.Post{})
 		return
@@ -287,13 +324,14 @@ func (h *Handlers) ListGlobalPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) GetGlobalAnalytics(w http.ResponseWriter, r *http.Request) {
-	global, err := h.Store.GetGlobalAnalytics()
+	userID := GetUserID(r)
+	global, err := h.Store.GetGlobalAnalytics(userID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to load global analytics")
 		return
 	}
 
-	performance, err := h.Store.GetBrandPerformance()
+	performance, err := h.Store.GetBrandPerformance(userID)
 	if err != nil {
 		Error(w, http.StatusInternalServerError, "failed to load brand performance")
 		return

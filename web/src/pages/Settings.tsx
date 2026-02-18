@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Database, Key, Globe, Brain, BarChart2, CheckCircle2, Circle } from "lucide-react";
+import { Database, Key, Globe, Brain, BarChart2, CheckCircle2, Circle, User, LogOut } from "lucide-react";
+import { api } from "@/lib/api";
 
 const integrations = [
   { name: "Gemini API", desc: "LLM + Embeddings for content generation and semantic memory", icon: Brain, status: "connected", key: "AIza••••••••••••••••••••Xk9" },
@@ -14,9 +16,48 @@ const integrations = [
 ];
 
 export default function Settings() {
+  const [user, setUser] = useState<{ id: string, email: string } | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await api.get("/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user", err);
+      }
+    };
+    fetchUser();
+  }, []);
+
   return (
     <Layout title="Settings" subtitle="Configure integrations, API keys, and agent behavior">
       <div className="max-w-3xl space-y-6">
+        {/* Account Info */}
+        <div className="card-glass rounded-xl overflow-hidden animate-fade-in">
+          <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <User className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+              Account Information
+            </h3>
+          </div>
+          <div className="p-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: "hsl(var(--primary) / 0.15)", color: "hsl(var(--primary))" }}>
+              {user?.email?.[0].toUpperCase() || "A"}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">{user?.email || "Loading..."}</p>
+              <p className="text-xs text-muted-foreground font-mono">User ID: {user?.id || "..."}</p>
+            </div>
+            <Button variant="outline" size="sm" className="ml-auto gap-2 border-border text-xs" onClick={() => { localStorage.removeItem("conca_token"); window.location.href = "/auth"; }}>
+              <LogOut className="w-3.5 h-3.5" /> Logout
+            </Button>
+          </div>
+        </div>
+
         {/* API Config */}
         <div className="card-glass rounded-xl overflow-hidden">
           <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>

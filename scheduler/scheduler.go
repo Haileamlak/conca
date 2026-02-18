@@ -3,7 +3,7 @@ package scheduler
 import (
 	"content-creator-agent/memory"
 	"content-creator-agent/models"
-	"fmt"
+	"content-creator-agent/tools/logger"
 	"time"
 )
 
@@ -22,7 +22,7 @@ func NewScheduler(s memory.Store, q Queue) *Scheduler {
 
 // Start initiates the scheduling loop that ensures all brands have active jobs.
 func (s *Scheduler) Start() {
-	fmt.Println("⏰ Scheduler started. Managing recurring brand cycles...")
+	logger.GlobalBuffer.Info("⏰ Scheduler started. Managing recurring brand cycles...")
 	ticker := time.NewTicker(15 * time.Minute)
 	defer ticker.Stop()
 
@@ -40,7 +40,7 @@ func (s *Scheduler) Start() {
 func (s *Scheduler) SyncAllBrands() {
 	brands, err := s.Store.ListAllBrands()
 	if err != nil {
-		fmt.Printf("Scheduler failed to list brands: %v\n", err)
+		logger.GlobalBuffer.Error("Scheduler failed to list brands: %v", err)
 		return
 	}
 
@@ -53,12 +53,12 @@ func (s *Scheduler) SyncAllBrands() {
 func (s *Scheduler) CheckScheduledPosts() {
 	posts, err := s.Store.GetPendingScheduledPosts()
 	if err != nil {
-		fmt.Printf("Scheduler failed to get pending posts: %v\n", err)
+		logger.GlobalBuffer.Error("Scheduler failed to get pending posts: %v", err)
 		return
 	}
 
 	for _, p := range posts {
-		fmt.Printf("⏰ Enqueuing publish job for post %s (Brand: %s)\n", p.ID, p.BrandID)
+		logger.GlobalBuffer.Info("⏰ Enqueuing publish job for post %s (Brand: %s)", p.ID, p.BrandID)
 		// We use 0 delay because it's already due or past due
 		s.Queue.Enqueue(p.BrandID, JobTypePublish, 0, p.ID)
 		// Mark as scheduled in the calendar table so we don't enqueue it again next time
@@ -74,7 +74,7 @@ func (s *Scheduler) EnsureScheduled(brandID string, intervalHours int) {
 
 	exists, err := s.Queue.HasPendingJob(brandID)
 	if err != nil {
-		fmt.Printf("Scheduler error checking job existence for %s: %v\n", brandID, err)
+		logger.GlobalBuffer.Error("Scheduler error checking job existence for %s: %v", brandID, err)
 		return
 	}
 
@@ -99,6 +99,6 @@ func (s *Scheduler) EnsureScheduled(brandID string, intervalHours int) {
 		nextRunDelay = 1 * time.Minute
 	}
 
-	fmt.Printf("⏰ Scheduling next run for brand %s in %v\n", brandID, nextRunDelay)
+	logger.GlobalBuffer.Info("⏰ Scheduling next run for brand %s in %v", brandID, nextRunDelay)
 	s.Queue.Enqueue(brandID, JobTypeRun, nextRunDelay, "")
 }

@@ -66,6 +66,11 @@ func main() {
 		analytics.Fetchers["linkedin"] = &tools.LinkedInAnalyticsFetcher{Client: lc}
 	}
 
+	// Meta Platforms (Stubs)
+	social.AddClient("instagram", tools.NewInstagramClient())
+	social.AddClient("tiktok", tools.NewTikTokClient())
+	social.AddClient("threads", tools.NewThreadsClient())
+
 	if len(social.Clients) == 0 {
 		social.AddClient("mock", &tools.MockSocialClient{Platform: "Mock"})
 	}

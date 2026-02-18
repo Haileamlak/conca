@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, Layers, FileText, BarChart3, Settings, 
+import {
+  LayoutDashboard, Layers, FileText, BarChart3, Settings,
   Zap, Activity, ChevronRight, Bot
 } from "lucide-react";
 
@@ -12,8 +12,35 @@ const navItems = [
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
+import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<{ id: string, email: string } | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await api.get("/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user", err);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("conca_token");
+    navigate("/auth");
+  };
 
   return (
     <aside className="w-60 flex-shrink-0 flex flex-col" style={{ background: "hsl(var(--sidebar-background))", borderRight: "1px solid hsl(var(--sidebar-border))" }}>
@@ -57,13 +84,19 @@ export function Sidebar() {
       <div className="p-4 border-t" style={{ borderColor: "hsl(var(--sidebar-border))" }}>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "hsl(var(--primary) / 0.2)", color: "hsl(var(--primary))" }}>
-            A
+            {user?.email?.[0].toUpperCase() || "A"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate" style={{ color: "hsl(var(--sidebar-accent-foreground))" }}>Admin</p>
-            <p className="text-xs truncate" style={{ color: "hsl(var(--muted-foreground))" }}>admin@conca.ai</p>
+            <p className="text-xs font-medium truncate" style={{ color: "hsl(var(--sidebar-accent-foreground))" }}>
+              {user?.email?.split('@')[0] || "Admin"}
+            </p>
+            <p className="text-xs truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
+              {user?.email || "admin@conca.ai"}
+            </p>
           </div>
-          <Activity className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "hsl(var(--primary))" }} />
+          <button onClick={handleLogout} className="w-7 h-7 rounded hover:bg-secondary flex items-center justify-center transition-colors">
+            <LogOut className="w-3.5 h-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
+          </button>
         </div>
       </div>
     </aside>

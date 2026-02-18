@@ -54,9 +54,9 @@
     --sidebar-ring: 183 100% 45%;
 
     /* Custom tokens */
-    --glow-primary: 0 0 20px hsl(183 100% 45% / 0.3);
+    --glow-primary: 0 0 20px hsla(180, 85%, 5%, 0.3);
     --glow-success: 0 0 20px hsl(152 76% 40% / 0.3);
-    --gradient-primary: linear-gradient(135deg, hsl(183 100% 45%), hsl(190 100% 35%));
+    --gradient-primary: linear-gradient(135deg, hsl(34, 100%, 29%), hsl(44, 96%, 31%));
     --gradient-card: linear-gradient(145deg, hsl(220 22% 10%), hsl(220 22% 8%));
     --border-glow: 0 0 0 1px hsl(183 100% 45% / 0.3);
   }

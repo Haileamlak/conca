@@ -72,3 +72,19 @@ func (m *MockSocialClient) Post(post *models.Post) error {
 
 	return nil
 }
+
+type InstagramClient struct{ MockSocialClient }
+type TikTokClient struct{ MockSocialClient }
+type ThreadsClient struct{ MockSocialClient }
+
+func NewInstagramClient() *InstagramClient {
+	return &InstagramClient{MockSocialClient{Platform: "instagram"}}
+}
+
+func NewTikTokClient() *TikTokClient {
+	return &TikTokClient{MockSocialClient{Platform: "tiktok"}}
+}
+
+func NewThreadsClient() *ThreadsClient {
+	return &ThreadsClient{MockSocialClient{Platform: "threads"}}
+}

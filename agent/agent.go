@@ -4,6 +4,7 @@ import (
 	"content-creator-agent/memory"
 	"content-creator-agent/models"
 	"content-creator-agent/tools"
+	"content-creator-agent/tools/logger"
 	"fmt"
 	"strings"
 	"time"
@@ -36,10 +37,10 @@ func NewAgent(brand models.BrandProfile, search tools.SearchTool, llm tools.LLMT
 
 // Run executes one full cycle of the agent loop.
 func (a *Agent) Run() error {
-	fmt.Printf("Starting autonomous loop for brand: %s\n", a.Brand.Name)
+	logger.GlobalBuffer.Info("Starting autonomous loop for brand: %s", a.Brand.Name)
 
 	// 1. Research
-	fmt.Println("Step 1: Researching latest trends...")
+	logger.GlobalBuffer.Info("Step 1: Researching latest trends...")
 	query := fmt.Sprintf("latest trends in %s", a.Brand.Industry)
 	trends, err := a.Search.Search(query)
 	if err != nil {
@@ -47,15 +48,15 @@ func (a *Agent) Run() error {
 	}
 
 	// 2. Planning
-	fmt.Println("Step 2: Planning content strategy...")
+	logger.GlobalBuffer.Info("Step 2: Planning content strategy...")
 	plan, err := a.Plan(trends)
 	if err != nil {
 		return fmt.Errorf("planning failed: %w", err)
 	}
-	fmt.Printf("Selected Topic: %s\n", plan)
+	logger.GlobalBuffer.Info("Selected Topic: %s", plan)
 
 	// 3. Generation & Evaluation Loop
-	fmt.Println("Step 3: Generating and refining content...")
+	logger.GlobalBuffer.Info("Step 3: Generating and refining content...")
 	var finalPost *models.Post
 	for i := 0; i < 3; i++ { // Allow up to 3 iterations
 		draft, err := a.Generate(plan)
@@ -68,7 +69,7 @@ func (a *Agent) Run() error {
 			return err
 		}
 
-		fmt.Printf("Draft Iteration %d (Score: %d/10)\n", i+1, score)
+		logger.GlobalBuffer.Info("Draft Iteration %d (Score: %d/10)", i+1, score)
 		if score >= 8 {
 			finalPost = &models.Post{
 				ID:        fmt.Sprintf("post-%d", time.Now().Unix()),
@@ -81,7 +82,7 @@ func (a *Agent) Run() error {
 			}
 			break
 		}
-		fmt.Printf("Feedback: %s\n", critique)
+		logger.GlobalBuffer.Warn("Feedback: %s", critique)
 	}
 
 	if finalPost == nil {
@@ -89,20 +90,20 @@ func (a *Agent) Run() error {
 	}
 
 	// 4. Posting
-	fmt.Println("Step 4: Publishing...")
+	logger.GlobalBuffer.Info("Step 4: Publishing...")
 	if err := a.Social.Post(finalPost); err != nil {
 		return fmt.Errorf("posting failed: %w", err)
 	}
 
 	// 5. Memory
-	fmt.Println("Step 5: Saving to long-term memory...")
+	logger.GlobalBuffer.Info("Step 5: Saving to long-term memory...")
 	if err := a.Store.SavePost(*finalPost); err != nil {
 		return fmt.Errorf("memory storage failed: %w", err)
 	}
 
 	// 5b. Vector Memory
 	if a.Embedding != nil && a.Vector != nil {
-		fmt.Println("Step 5b: Generating embeddings and indexing post...")
+		logger.GlobalBuffer.Info("Step 5b: Generating embeddings and indexing post...")
 		embedding, err := a.Embedding.Embed(finalPost.Content)
 		if err == nil {
 			a.Vector.Add(memory.VectorRecord{
@@ -115,20 +116,20 @@ func (a *Agent) Run() error {
 				},
 			})
 		} else {
-			fmt.Printf("Warning: Failed to create embedding: %v\n", err)
+			logger.GlobalBuffer.Error("Warning: Failed to create embedding: %v", err)
 		}
 	}
 
-	fmt.Println("Autonomous cycle completed successfully!")
+	logger.GlobalBuffer.Info("Autonomous cycle completed successfully!")
 	return nil
 }
 
 // PlanBatch researches and generates a series of posts to be scheduled for the future.
 func (a *Agent) PlanBatch(postCount int) error {
-	fmt.Printf("🎯 Planning batch of %d posts for brand: %s\n", postCount, a.Brand.Name)
+	logger.GlobalBuffer.Info("🎯 Planning batch of %d posts for brand: %s", postCount, a.Brand.Name)
 
 	// 1. Research
-	fmt.Println("Step 1: Researching latest trends for batch...")
+	logger.GlobalBuffer.Info("Step 1: Researching latest trends for batch...")
 	query := fmt.Sprintf("latest trends in %s", a.Brand.Industry)
 	trends, err := a.Search.Search(query)
 	if err != nil {
@@ -143,12 +144,12 @@ func (a *Agent) PlanBatch(postCount int) error {
 			return err
 		}
 		topics = append(topics, topic)
-		fmt.Printf("Planned topic %d: %s\n", i+1, topic)
+		logger.GlobalBuffer.Info("Planned topic %d: %s", i+1, topic)
 	}
 
 	// 3. For each topic, generate and schedule
 	for i, topic := range topics {
-		fmt.Printf("Step 3.%d: Generating content for: %s\n", i+1, topic)
+		logger.GlobalBuffer.Info("Step 3.%d: Generating content for: %s", i+1, topic)
 
 		var draft string
 		var score int
@@ -181,9 +182,9 @@ func (a *Agent) PlanBatch(postCount int) error {
 		}
 
 		if err := a.Store.SaveScheduledPost(sp); err != nil {
-			fmt.Printf("Warning: Failed to save scheduled post: %v\n", err)
+			logger.GlobalBuffer.Error("Warning: Failed to save scheduled post: %v", err)
 		} else {
-			fmt.Printf("✅ Scheduled post %d for %v\n", i+1, scheduleTime.Format(time.RFC822))
+			logger.GlobalBuffer.Info("✅ Scheduled post %d for %v", i+1, scheduleTime.Format(time.RFC822))
 		}
 	}
 
@@ -192,7 +193,7 @@ func (a *Agent) PlanBatch(postCount int) error {
 
 // PublishScheduledPost takes a previously planned post and pushes it to social media.
 func (a *Agent) PublishScheduledPost(sp models.ScheduledPost) error {
-	fmt.Printf("🚀 Publishing scheduled post: %s\n", sp.ID)
+	logger.GlobalBuffer.Info("🚀 Publishing scheduled post: %s", sp.ID)
 
 	post := models.Post{
 		ID:        fmt.Sprintf("p-%d", time.Now().Unix()),
@@ -306,16 +307,16 @@ func (a *Agent) SyncAnalytics() error {
 		return err
 	}
 
-	fmt.Printf("Syncing analytics for %d posts...\n", len(history))
+	logger.GlobalBuffer.Info("Syncing analytics for %d posts...", len(history))
 	for _, p := range history {
 		if p.SocialID == "" {
 			continue
 		}
 
-		fmt.Printf("Fetching metrics for post %s (%s)...\n", p.ID, p.Platform)
+		logger.GlobalBuffer.Info("Fetching metrics for post %s (%s)...", p.ID, p.Platform)
 		metrics, err := a.Analytics.Fetch(&p)
 		if err != nil {
-			fmt.Printf("Warning: Failed to fetch metrics for %s: %v\n", p.ID, err)
+			logger.GlobalBuffer.Warn("Warning: Failed to fetch metrics for %s: %v", p.ID, err)
 			continue
 		}
 
@@ -336,7 +337,7 @@ func (a *Agent) SyncAnalytics() error {
 
 // Start runs the agent loop autonomously at the specified interval.
 func (a *Agent) Start(interval time.Duration) {
-	fmt.Printf("Agent started in daemon mode. Cycle interval: %v\n", interval)
+	logger.GlobalBuffer.Info("Agent started in daemon mode. Cycle interval: %v", interval)
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -349,14 +350,14 @@ func (a *Agent) Start(interval time.Duration) {
 }
 
 func (a *Agent) runAndSync() {
-	fmt.Printf("\n--- [%s] Starting Autonomous Cycle ---\n", time.Now().Format(time.RFC822))
+	logger.GlobalBuffer.Info("\n--- [%s] Starting Autonomous Cycle ---", time.Now().Format(time.RFC822))
 	if err := a.Run(); err != nil {
-		fmt.Printf("Cycle error: %v\n", err)
+		logger.GlobalBuffer.Error("Cycle error: %v", err)
 	}
 
-	fmt.Printf("[%s] Syncing analytics...\n", time.Now().Format(time.RFC822))
+	logger.GlobalBuffer.Info("[%s] Syncing analytics...", time.Now().Format(time.RFC822))
 	if err := a.SyncAnalytics(); err != nil {
-		fmt.Printf("Sync error: %v\n", err)
+		logger.GlobalBuffer.Error("Sync error: %v", err)
 	}
-	fmt.Printf("--- [%s] Cycle Finished ---\n", time.Now().Format(time.RFC822))
+	logger.GlobalBuffer.Info("--- [%s] Cycle Finished ---", time.Now().Format(time.RFC822))
 }

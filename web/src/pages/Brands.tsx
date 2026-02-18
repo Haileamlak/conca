@@ -85,15 +85,11 @@ function CreateBrandModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 
   const handleCreate = async () => {
     try {
-      const res = await fetch("/api/brands", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          topics: formData.topics.split(",").map(s => s.trim()).filter(s => s),
-          anti_topics: formData.anti_topics.split(",").map(s => s.trim()).filter(s => s),
-          schedule_interval_hours: Number(formData.schedule_interval_hours)
-        })
+      const res = await api.post("/brands", {
+        ...formData,
+        topics: formData.topics.split(",").map(s => s.trim()).filter(s => s),
+        anti_topics: formData.anti_topics.split(",").map(s => s.trim()).filter(s => s),
+        schedule_interval_hours: Number(formData.schedule_interval_hours)
       });
 
       if (res.ok) {
@@ -166,6 +162,8 @@ function CreateBrandModal({ onClose, onSuccess }: { onClose: () => void; onSucce
   );
 }
 
+import { api } from "@/lib/api";
+
 export default function Brands() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -178,9 +176,13 @@ export default function Brands() {
 
   const fetchBrands = async () => {
     try {
-      const res = await fetch("/api/brands");
+      const res = await api.get("/brands");
       const data = await res.json();
-      setBrands(data || []);
+      if (Array.isArray(data)) {
+        setBrands(data);
+      } else {
+        setBrands([]);
+      }
     } catch (error) {
       console.error("Failed to fetch brands", error);
     } finally {
@@ -190,12 +192,12 @@ export default function Brands() {
 
   const handleRun = async (id: string) => {
     toast({ title: "Agent Run Triggered", description: "Generation cycle started in background." });
-    await fetch(`/api/brands/${id}/run`, { method: "POST" });
+    await api.post(`/brands/${id}/run`);
   };
 
   const handleSync = async (id: string) => {
     toast({ title: "Sync Triggered", description: "Updating performance metrics..." });
-    await fetch(`/api/brands/${id}/sync`, { method: "POST" });
+    await api.post(`/brands/${id}/sync`);
   };
 
   return (

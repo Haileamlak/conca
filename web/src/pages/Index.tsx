@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -6,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Layers, FileText, TrendingUp, Zap, Play, RefreshCw,
-  Twitter, Linkedin, Brain, Search, BarChart2
+  Twitter, Linkedin, Brain, Search, BarChart2, Plus
 } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface Post {
   id: string;
@@ -27,20 +29,38 @@ interface BrandPerf {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [performance, setPerformance] = useState<BrandPerf[]>([]);
   const [stats, setStats] = useState({ impressions: 0, likes: 0, shares: 0 });
+  const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchDashboardData();
+    fetchLogs();
+    const interval = setInterval(() => {
+      fetchDashboardData();
+      fetchLogs();
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchLogs = async () => {
+    try {
+      const res = await api.get("/logs");
+      const data = await res.json();
+      setLogs(data || []);
+    } catch (err) {
+      console.error("Failed to fetch logs", err);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
       // Fetch global analytics (stats + brand performance)
-      const analyticsRes = await fetch("/api/analytics");
+      const analyticsRes = await api.get("/analytics");
       const analyticsData = await analyticsRes.json();
       if (analyticsData.global) {
         setStats({
@@ -49,12 +69,20 @@ export default function Dashboard() {
           shares: analyticsData.global.total_shares,
         });
       }
-      if (analyticsData.performance) setPerformance(analyticsData.performance);
+      if (analyticsData && analyticsData.performance && Array.isArray(analyticsData.performance)) {
+        setPerformance(analyticsData.performance);
+      } else {
+        setPerformance([]);
+      }
 
       // Fetch recent posts
-      const postsRes = await fetch("/api/posts");
+      const postsRes = await api.get("/posts");
       const postsData = await postsRes.json();
-      setPosts(postsData.slice(0, 5));
+      if (Array.isArray(postsData)) {
+        setPosts(postsData.slice(0, 5));
+      } else {
+        setPosts([]);
+      }
     } catch (error) {
       console.error("Failed to fetch dashboard data", error);
     } finally {
@@ -65,14 +93,14 @@ export default function Dashboard() {
   const handleRunAll = async () => {
     toast({ title: "Agent Run Triggered", description: "Starting autonomous cycle for all brands..." });
     for (const b of performance) {
-      await fetch(`/api/brands/${b.brand_id}/run`, { method: "POST" });
+      await api.post(`/brands/${b.brand_id}/run`);
     }
   };
 
   const handleSyncAll = async () => {
     toast({ title: "Sync Triggered", description: "Fetching latest analytics from platforms..." });
     for (const b of performance) {
-      await fetch(`/api/brands/${b.brand_id}/sync`, { method: "POST" });
+      await api.post(`/brands/${b.brand_id}/sync`);
     }
     setTimeout(fetchDashboardData, 2000);
   };
@@ -97,13 +125,36 @@ export default function Dashboard() {
         </div>
       }
     >
+      {/* Welcome / Empty State for New Users */}
+      {!loading && performance.length === 0 && (
+        <div className="card-glass rounded-2xl p-8 mb-8 flex flex-col items-center text-center animate-fade-in" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.05), hsl(var(--secondary) / 0.1))", border: "1px solid hsl(var(--primary) / 0.2)" }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: "hsl(var(--primary) / 0.15)", color: "hsl(var(--primary))", boxShadow: "0 0 20px hsl(var(--primary) / 0.2)" }}>
+            <Layers className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Welcome to your Autonomous Content Hub</h2>
+          <p className="text-sm text-muted-foreground max-w-md mb-8 leading-relaxed">
+            You haven't created any brand identities yet. To start generating intelligent content and monitoring trends, define your first brand.
+          </p>
+          <div className="flex gap-4">
+            <Button className="gap-2" style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }} onClick={() => navigate("/brands")}>
+              <Plus className="w-4 h-4" /> Create First Brand
+            </Button>
+            <Button variant="outline" className="border-border" onClick={() => navigate("/settings")}>
+              View Integrations
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Posts" value={performance.reduce((acc, b) => acc + b.post_count, 0).toString()} sub="All brands" icon={<FileText className="w-4 h-4" />} glow="primary" />
-        <StatCard label="Active Brands" value={performance.length.toString()} sub="Personal Portfolio" icon={<Layers className="w-4 h-4" />} />
-        <StatCard label="Total Impressions" value={stats.impressions.toLocaleString()} sub="Lifetime Reach" icon={<TrendingUp className="w-4 h-4" />} glow="success" />
-        <StatCard label="Total Engagement" value={(stats.likes + stats.shares).toLocaleString()} sub="Likes + Shares" icon={<Zap className="w-4 h-4" />} />
-      </div>
+      {!loading && performance.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Total Posts" value={performance.reduce((acc, b) => acc + b.post_count, 0).toString()} sub="All brands" icon={<FileText className="w-4 h-4" />} glow="primary" />
+          <StatCard label="Active Brands" value={performance.length.toString()} sub="Personal Portfolio" icon={<Layers className="w-4 h-4" />} />
+          <StatCard label="Total Impressions" value={stats.impressions.toLocaleString()} sub="Lifetime Reach" icon={<TrendingUp className="w-4 h-4" />} glow="success" />
+          <StatCard label="Total Engagement" value={(stats.likes + stats.shares).toLocaleString()} sub="Likes + Shares" icon={<Zap className="w-4 h-4" />} />
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-6">
         {/* Recent Posts */}
@@ -136,7 +187,11 @@ export default function Dashboard() {
                 </div>
               ))}
               {posts.length === 0 && (
-                <div className="px-5 py-8 text-center text-sm text-muted-foreground">No posts found. Start an agent run to generate content!</div>
+                <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                  {performance.length > 0
+                    ? "No posts found. Start an agent run to generate content!"
+                    : "Create a brand and start your first agent run to see history here."}
+                </div>
               )}
             </div>
           </div>
@@ -145,7 +200,7 @@ export default function Dashboard() {
         {/* Right col */}
         <div className="col-span-5 space-y-5">
           {/* Agent Activity Feed */}
-          <div className="card-glass rounded-xl overflow-hidden">
+          <div className="card-glass rounded-xl overflow-hidden flex flex-col h-[350px]">
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full status-pulse" style={{ background: "hsl(var(--success))" }} />
@@ -153,28 +208,17 @@ export default function Dashboard() {
               </h2>
               <span className="text-xs font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>Live</span>
             </div>
-            <div className="p-4 space-y-3">
-              {agentActivity.map((item, i) => {
-                const iconMap: Record<string, React.ReactNode> = {
-                  research: <Search className="w-3 h-3" />,
-                  generate: <Brain className="w-3 h-3" />,
-                  publish: <Zap className="w-3 h-3" />,
-                  sync: <BarChart2 className="w-3 h-3" />,
-                  start: <Play className="w-3 h-3" />,
-                };
-                return (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "hsl(var(--primary) / 0.1)", color: "hsl(var(--primary))" }}>
-                      {iconMap[item.type]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium">{item.event}</p>
-                      <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{item.detail}</p>
-                    </div>
-                    <span className="text-xs font-mono flex-shrink-0" style={{ color: "hsl(var(--muted-foreground))" }}>{item.time}</span>
-                  </div>
-                );
-              })}
+            <div className="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-2">
+              {logs.slice().reverse().map((log, i) => (
+                <div key={i} className="flex gap-2 animate-fade-in border-b border-border/10 pb-1.5 last:border-0">
+                  <span className="text-muted-foreground whitespace-nowrap">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                  <span className={log.level === "ERROR" ? "text-destructive" : log.level === "WARN" ? "text-warning" : "text-primary"} style={{ minWidth: "40px" }}>
+                    {log.level}:
+                  </span>
+                  <span className="text-foreground/90 leading-normal">{log.message}</span>
+                </div>
+              ))}
+              {logs.length === 0 && <div className="text-muted-foreground">Waiting for agent activity...</div>}
             </div>
           </div>
 

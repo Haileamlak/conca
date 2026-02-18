@@ -9,8 +9,10 @@
 ## 🚀 Key Capabilities
 
 - **Autonomous Agent Loop**: Continuous research and generation cycles powered by Gemini LLM.
-- **Interactive Mission Control**: A stunning real-time dashboard to monitor agent activity and global performance metrics.
+- **Interactive Mission Control**: A stunning real-time dashboard to monitor **live agent logs** and global performance metrics.
+- **Content Editor & Review**: Review, edit topic/content, and approve generated content before it goes live.
 - **Content Calendar & Approval**: Visual weekly planner with "Auto-Plan" functionality to generate a week of content in one click.
+- **Platforms**: Integrated support for LinkedIn and X, with stubs for Instagram, TikTok, and Threads.
 - **Brand Identity Wizard**: Manage multiple "AI Personalities" with distinct industries, voices, and target audiences.
 - **Analytics Dashboard**: Multi-brand performance tracking with automated scoring based on live engagement (likes, shares, views).
 - **Enterprise-Ready Storage**: Flexible data layer supporting **PostgreSQL** or local JSON for self-hosting.

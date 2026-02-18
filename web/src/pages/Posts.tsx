@@ -4,6 +4,10 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Twitter, Linkedin, Heart, Share2, MessageCircle, Eye, Filter } from "lucide-react";
+import { api } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Post {
   id: string;
@@ -16,6 +20,33 @@ interface Post {
   created_at: string;
 }
 
+function EditPostModal({ post, onClose, onSave }: { post: Post; onClose: () => void; onSave: (topic: string, content: string) => void }) {
+  const [topic, setTopic] = useState(post.topic);
+  const [content, setContent] = useState(post.content);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center font-sans" style={{ background: "hsl(var(--background) / 0.8)", backdropFilter: "blur(4px)" }}>
+      <div className="w-full max-w-lg rounded-2xl p-6 shadow-2xl animate-fade-in" style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}>
+        <h2 className="text-base font-semibold mb-4 text-foreground">Edit Generated Post</h2>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-mono uppercase text-muted-foreground">Topic</Label>
+            <Input value={topic} onChange={(e) => setTopic(e.target.value)} className="bg-secondary border-border h-9 text-sm" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-mono uppercase text-muted-foreground">Content</Label>
+            <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={6} className="bg-secondary border-border text-sm leading-relaxed" />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <Button variant="outline" className="flex-1 border-border" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1" onClick={() => onSave(topic, content)}>Save Changes</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Posts() {
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [brands, setBrands] = useState<string[]>(["All Brands"]);
@@ -23,6 +54,7 @@ export default function Posts() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [platformFilter, setPlatformFilter] = useState("All Platforms");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -35,7 +67,7 @@ export default function Posts() {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch("/api/posts");
+      const res = await api.get("/posts");
       const data = await res.json();
       setAllPosts(data || []);
 
@@ -49,10 +81,34 @@ export default function Posts() {
     }
   };
 
-  const handleApprove = async (postID: string) => {
-    // In a real app, we'd have a specific endpoint for post approval
-    // For now we'll just toast
-    toast({ title: "Approved", description: "Post has been moved to scheduled queue." });
+  const handleUpdateStatus = async (postID: string, brandID: string, status: string) => {
+    try {
+      const res = await api.patch(`/brands/${brandID}/calendar/status`, { id: postID, status });
+      if (res.ok) {
+        toast({ title: "Status Updated", description: `Post is now ${status.replace('_', ' ')}.` });
+        fetchPosts();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    }
+  };
+
+  const handleSaveEdit = async (topic: string, content: string) => {
+    if (!editingPost) return;
+    try {
+      const res = await api.put(`/brands/${editingPost.brand_id}/calendar/post`, {
+        id: editingPost.id,
+        topic,
+        content
+      });
+      if (res.ok) {
+        toast({ title: "Post Saved", description: "Your changes have been recorded." });
+        setEditingPost(null);
+        fetchPosts();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" });
+    }
   };
 
   const filtered = allPosts.filter((p) => {
@@ -73,7 +129,7 @@ export default function Posts() {
         </div>
       }
     >
-      {/* Filters */}
+      {/* ... Filters UI ... */}
       <div className="flex flex-wrap gap-2 mb-6">
         {[
           { label: "Brand", options: brands, value: brandFilter, onChange: setBrandFilter },
@@ -87,7 +143,7 @@ export default function Posts() {
             className="text-xs font-mono px-3 py-1.5 rounded-lg border outline-none cursor-pointer"
             style={{ background: "hsl(var(--secondary))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
           >
-            {f.options.map((o) => <option key={o} value={o}>{o.split('_').pop()}</option>)}
+            {f.options.map((o: any) => <option key={o} value={o}>{o.split('_').pop()}</option>)}
           </select>
         ))}
       </div>
@@ -117,23 +173,9 @@ export default function Posts() {
                   </div>
                   <p className="text-sm font-medium truncate">{post.topic}</p>
                   <p className="text-xs mt-0.5 font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>
-                    {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </p>
                 </div>
-
-                {post.status === "published" && (
-                  <div className="flex items-center gap-4 text-xs font-mono flex-shrink-0 hidden sm:flex">
-                    <span className="flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-                      <Heart className="w-3 h-3" style={{ color: "hsl(var(--destructive))" }} /> {post.analytics.likes}
-                    </span>
-                    <span className="flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-                      <Share2 className="w-3 h-3" style={{ color: "hsl(var(--primary))" }} /> {post.analytics.shares}
-                    </span>
-                    <span className="flex items-center gap-1" style={{ color: "hsl(var(--muted-foreground))" }}>
-                      <Eye className="w-3 h-3" /> {post.analytics.views.toLocaleString()}
-                    </span>
-                  </div>
-                )}
 
                 <StatusBadge status={post.status as any} />
               </div>
@@ -143,27 +185,11 @@ export default function Posts() {
                   <div className="mt-3 p-3 rounded-lg" style={{ background: "hsl(var(--secondary))" }}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.content || "(No content generated)"}</p>
                   </div>
-                  {post.status === "published" && (
-                    <div className="grid grid-cols-4 gap-3 mt-3">
-                      {[
-                        { icon: Heart, label: "Likes", value: post.analytics.likes, color: "hsl(var(--destructive))" },
-                        { icon: Share2, label: "Shares", value: post.analytics.shares, color: "hsl(var(--primary))" },
-                        { icon: MessageCircle, label: "Comments", value: post.analytics.comments, color: "hsl(var(--success))" },
-                        { icon: Eye, label: "Views", value: post.analytics.views.toLocaleString(), color: "hsl(var(--warning))" },
-                      ].map((m) => (
-                        <div key={m.label} className="rounded-lg p-3 text-center" style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}>
-                          <m.icon className="w-4 h-4 mx-auto mb-1" style={{ color: m.color }} />
-                          <p className="text-sm font-mono font-bold">{m.value}</p>
-                          <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>{m.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                   {post.status === "pending_review" && (
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" className="gap-2 text-xs h-8" style={{ background: "hsl(var(--success))", color: "hsl(var(--success-foreground))" }} onClick={() => handleApprove(post.id)}>Approve & Publish</Button>
-                      <Button size="sm" variant="outline" className="gap-2 text-xs h-8 border-border">Edit</Button>
-                      <Button size="sm" variant="outline" className="gap-2 text-xs h-8 border-destructive/40 text-destructive">Reject</Button>
+                    <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" className="gap-2 text-xs h-8" style={{ background: "hsl(var(--success))", color: "hsl(var(--success-foreground))" }} onClick={() => handleUpdateStatus(post.id, post.brand_id, "approved")}>Approve</Button>
+                      <Button size="sm" variant="outline" className="gap-2 text-xs h-8 border-border" onClick={() => setEditingPost(post)}>Edit</Button>
+                      <Button size="sm" variant="outline" className="gap-2 text-xs h-8 border-destructive/40 text-destructive" onClick={() => handleUpdateStatus(post.id, post.brand_id, "failed")}>Reject</Button>
                     </div>
                   )}
                 </div>
@@ -175,6 +201,8 @@ export default function Posts() {
           )}
         </div>
       )}
+
+      {editingPost && <EditPostModal post={editingPost} onClose={() => setEditingPost(null)} onSave={handleSaveEdit} />}
     </Layout>
   );
 }
