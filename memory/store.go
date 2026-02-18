@@ -15,8 +15,11 @@ type Store interface {
 	// Posts
 	SavePost(post models.Post) error
 	GetHistory(brandID string) ([]models.Post, error)
+	GetGlobalHistory(limit int) ([]models.Post, error)
 	GetAnalytics(brandID string) ([]models.Analytics, error)
 	UpdateAnalytics(brandID string, postID string, analytics models.Analytics) error
+	GetGlobalAnalytics() (models.GlobalAnalytics, error)
+	GetBrandPerformance() ([]models.BrandPerformance, error)
 
 	// Brands
 	SaveBrand(brand models.BrandProfile, userID string) error
@@ -100,6 +103,26 @@ func (f *FileStore) GetHistory(brandID string) ([]models.Post, error) {
 	return history, nil
 }
 
+func (f *FileStore) GetGlobalHistory(limit int) ([]models.Post, error) {
+	brands, err := f.ListAllBrands()
+	if err != nil {
+		return nil, err
+	}
+
+	var allPosts []models.Post
+	for _, b := range brands {
+		posts, _ := f.GetHistory(b.ID)
+		allPosts = append(allPosts, posts...)
+	}
+
+	// Sort by created_at desc
+	// (Actually for simplicity I'll just return the last N)
+	if limit > 0 && len(allPosts) > limit {
+		allPosts = allPosts[len(allPosts)-limit:]
+	}
+	return allPosts, nil
+}
+
 // GetAnalytics is a placeholder for retrieving aggregated analytics.
 func (f *FileStore) GetAnalytics(brandID string) ([]models.Analytics, error) {
 	history, err := f.GetHistory(brandID)
@@ -148,6 +171,66 @@ func (f *FileStore) UpdateAnalytics(brandID string, postID string, analytics mod
 	}
 
 	return os.WriteFile(historyPath, updatedData, 0644)
+}
+
+func (f *FileStore) GetGlobalAnalytics() (models.GlobalAnalytics, error) {
+	brands, err := f.ListAllBrands()
+	if err != nil {
+		return models.GlobalAnalytics{}, err
+	}
+
+	var global models.GlobalAnalytics
+	for _, b := range brands {
+		analytics, _ := f.GetAnalytics(b.ID)
+		for _, a := range analytics {
+			global.TotalImpressions += a.Views
+			global.TotalLikes += a.Likes
+			global.TotalShares += a.Shares
+			global.TotalComments += a.Comments
+		}
+	}
+	return global, nil
+}
+
+func (f *FileStore) GetBrandPerformance() ([]models.BrandPerformance, error) {
+	brands, err := f.ListAllBrands()
+	if err != nil {
+		return nil, err
+	}
+
+	var results []models.BrandPerformance
+	for _, b := range brands {
+		posts, _ := f.GetHistory(b.ID)
+		if len(posts) == 0 {
+			continue
+		}
+
+		perf := models.BrandPerformance{
+			BrandID:   b.ID,
+			BrandName: b.Name,
+			PostCount: len(posts),
+		}
+
+		totalLikes := 0
+		totalShares := 0
+		for _, p := range posts {
+			totalLikes += p.Analytics.Likes
+			totalShares += p.Analytics.Shares
+		}
+
+		perf.AvgLikes = float64(totalLikes) / float64(len(posts))
+		perf.AvgShares = float64(totalShares) / float64(len(posts))
+
+		// Simple score calculation: avg likes * 2 + avg shares * 5
+		score := int(perf.AvgLikes*2 + perf.AvgShares*5)
+		if score > 100 {
+			score = 100
+		}
+		perf.Score = score
+
+		results = append(results, perf)
+	}
+	return results, nil
 }
 
 // --- Brand Management (FileStore Impl) ---

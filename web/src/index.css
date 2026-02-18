@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Dark mission-control theme */
+    --background: 220 25% 6%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 22% 9%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 22% 9%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 183 100% 45%;
+    --primary-foreground: 220 25% 6%;
+
+    --secondary: 220 18% 14%;
+    --secondary-foreground: 210 20% 80%;
+
+    --muted: 220 18% 14%;
+    --muted-foreground: 215 16% 50%;
+
+    --accent: 183 100% 45%;
+    --accent-foreground: 220 25% 6%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 152 76% 40%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 25% 6%;
+
+    --border: 220 18% 14%;
+    --input: 220 18% 14%;
+    --ring: 183 100% 45%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 220 28% 5%;
+    --sidebar-foreground: 210 20% 70%;
+    --sidebar-primary: 183 100% 45%;
+    --sidebar-primary-foreground: 220 25% 6%;
+    --sidebar-accent: 220 18% 12%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 220 18% 10%;
+    --sidebar-ring: 183 100% 45%;
+
+    /* Custom tokens */
+    --glow-primary: 0 0 20px hsl(183 100% 45% / 0.3);
+    --glow-success: 0 0 20px hsl(152 76% 40% / 0.3);
+    --gradient-primary: linear-gradient(135deg, hsl(183 100% 45%), hsl(190 100% 35%));
+    --gradient-card: linear-gradient(145deg, hsl(220 22% 10%), hsl(220 22% 8%));
+    --border-glow: 0 0 0 1px hsl(183 100% 45% / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+
+  .glow-success {
+    box-shadow: var(--glow-success);
+  }
+
+  .card-glass {
+    background: var(--gradient-card);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .terminal-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: hsl(var(--primary));
+  }
+
+  .status-pulse {
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .scan-line {
+    background: linear-gradient(
+      transparent 0%,
+      hsl(183 100% 45% / 0.05) 50%,
+      transparent 100%
+    );
+    animation: scan 4s linear infinite;
+  }
+
+  @keyframes scan {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(100vh); }
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200;
+    color: hsl(var(--sidebar-foreground));
+  }
+
+  .sidebar-item:hover {
+    background: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+
+  .sidebar-item.active {
+    background: hsl(183 100% 45% / 0.15);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(183 100% 45% / 0.3);
+  }
+}

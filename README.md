@@ -2,85 +2,85 @@
   <img src="logo_black.png" alt="Conca Logo" width="200px">
 </p>
 
-**Conca** is a sophisticated, production-grade autonomous agent built in Go, designed to scale from a CLI utility to a comprehensive SaaS platform. It researches trends, generates platform-optimized content, manages multiple brand identities, and optimizes performance using live analytics and semantic memory.
+**Conca** is an autonomous, self-hosted AI content platform designed for modern creators and enterprises. It transforms raw trends into platform-optimized content across multiple brand identities using a sophisticated `Plan -> Generate -> Evaluate -> Publish` loop, all managed through a premium web dashboard.
 
 ---
 
-## Key Capabilities
+## 🚀 Key Capabilities
 
-- **Autonomous Agent Loop**: A complete `Plan -> Generate -> Evaluate -> Publish` cycle that operates without human intervention.
-- **SaaS-Ready API**: A robust HTTP API powered by Chi, featuring JWT authentication and multi-tenant isolation.
-- **Enterprise-Grade Storage**: Flexible data layer supporting **PostgreSQL** for massive scale or local JSON files for rapid development.
-- **Semantic Memory (RAG)**: Uses Gemini Embeddings and a local Vector Store to learn from past successes and maintain brand consistency semantically.
-- **Resilient Trend Research**: Leverages **NewsAPI**, **NewsData.io**, and **DuckDuckGo** scrapers to find what's viral NOW.
-- **Live Analytics Optimization**: Automatically tracks engagement metrics (likes, shares, comments) to update internal performance scores.
-- **Multi-Platform Posting**: Direct integrations with **Twitter/X (v2)** and **LinkedIn (ugcPosts)**.
-
----
-
-## High-Level Architecture
-
-The system is built on a pragmatic, flat package structure designed for high velocity and low technical debt:
-
-- `/api`: RESTful handlers, JWT middleware, and server orchestration.
-- `/agent`: The "Brain" – core autonomous logic and the planning loop.
-- `/tools`: Heavy-lifters (LLM, Search Engines, Social Clients, Analytics).
-- `/memory`: Dual-layer persistence (Relational via Postgres/Files + Semantic via Vector DB).
-- `/cmd/server`: The SaaS gateway.
-- `/cmd/cli`: The developer's power tool.
+- **Autonomous Agent Loop**: Continuous research and generation cycles powered by Gemini LLM.
+- **Interactive Mission Control**: A stunning real-time dashboard to monitor agent activity and global performance metrics.
+- **Content Calendar & Approval**: Visual weekly planner with "Auto-Plan" functionality to generate a week of content in one click.
+- **Brand Identity Wizard**: Manage multiple "AI Personalities" with distinct industries, voices, and target audiences.
+- **Analytics Dashboard**: Multi-brand performance tracking with automated scoring based on live engagement (likes, shares, views).
+- **Enterprise-Ready Storage**: Flexible data layer supporting **PostgreSQL** or local JSON for self-hosting.
+- **Semantic Memory (RAG)**: Learns from past successes to maintain brand consistency and viral potential.
 
 ---
 
-## Getting Started
+## 🛠 High-Level Architecture
 
-### Prerequisites
+Conca is built with a pragmatic, full-stack architecture:
+
+- **`/web`**: Modern React dashboard built with Vite, TypeScript, TailwindCSS, and shadcn/ui.
+- **`/api`**: RESTful Go backend using Chi, featuring JWT auth and SQLite-backed job queues.
+- **`/agent`**: The "Brain" – core autonomous logic and the planning loop.
+- **`/tools`**: Integrations with Gemini, NewsAPI, NewsData.io, Twitter/X, and LinkedIn.
+- **`/memory`**: Persistent storage (Postgres/JSON) and Vector Memory (Gemini Embeddings).
+
+---
+
+## ⚡️ Getting Started
+
+### 1. Prerequisites
 - **Go 1.21+**
-- **Gemini API Key** (Required for LLM & Embeddings)
-- **PostgreSQL** (Optional, falls back to JSON)
+- **Node.js 18+ & npm**
+- **Gemini API Key** (Required for LLM & RAG)
 
-### Installation
+### 2. Installation & Setup
 ```bash
+# Clone the repository
 git clone https://github.com/Haileamlak/conca.git
 cd conca
+
+# Install Backend dependencies
 go mod download
+
+# Install & Build Frontend
+cd web
+npm install
+npm run build
+cd ..
 ```
 
-### Environment Configuration
-Create a `.env` file or export the following:
+### 3. Configuration
+Create a `.env` file in the root:
 ```bash
-export GEMINI_API_KEY="your-key"
-export DATABASE_URL="postgres://user:pass@localhost:5432/dbname" # Optional
-export JWT_SECRET="your-secure-secret"
+GEMINI_API_KEY="your-gemini-key"
+JWT_SECRET="your-secure-secret"
+# DATABASE_URL="postgres://user:pass@localhost:5432/dbname" # Optional: falls back to local JSON
 ```
+
+### 4. Launch
+```bash
+# Start the full platform (Server + Dashboard + Worker)
+go run cmd/server/main.go
+```
+The platform will be available at **`http://localhost:8080`**.
 
 ---
 
-## Multi-Mode Operation
+## 📡 Operational Endpoints
 
-### 1. SaaS Mode (HTTP API)
-Run the agent as a multi-tenant service:
-```bash
-go run cmd/server/main.go --port 8080
-```
-**Available Endpoints:**
-* `POST /api/auth/register` - Create a user account
-* `POST /api/brands` - Define a new brand voice/industry
-* `POST /api/brands/{id}/run` - Trigger an autonomous content cycle
-* `GET /api/brands/{id}/posts` - Review post history and analytics
+The system exposes a clean REST API for external integrations:
 
-### 2. Daemon Mode (CLI)
-Continuous background operation for a specific brand:
-```bash
-go run cmd/main.go --config config/tech_startup.json --daemon --interval 4h
-```
-
-### 3. Analytics Synchronization
-Sync performance data from social platforms to local memory:
-```bash
-go run cmd/main.go --sync
-```
+- `POST /api/auth/login` - Authenticate and receive JWT
+- `GET  /api/analytics` - Retrieve global performance snapshots
+- `GET  /api/brands` - List all configured agent identities
+- `POST /api/brands/{id}/run` - Trigger an immediate autonomous cycle
+- `GET  /api/brands/{id}/calendar/scheduled` - Access upcoming content queue
 
 ---
 
-## License
+## 📜 License
 MIT License - see [LICENSE](LICENSE) for details.

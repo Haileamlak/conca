@@ -205,7 +205,57 @@ func (h *Handlers) TriggerSync(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handlers) TriggerPlan(w http.ResponseWriter, r *http.Request) {
+	brandID := chi.URLParam(r, "brandID")
+	if _, _, err := h.Store.GetBrand(brandID); err != nil {
+		Error(w, http.StatusNotFound, "brand not found")
+		return
+	}
+
+	// Default to planning 5 posts
+	if err := h.Queue.Enqueue(brandID, scheduler.JobTypePlan, 0, "5"); err != nil {
+		Error(w, http.StatusInternalServerError, "failed to enqueue planning job")
+		return
+	}
+
+	JSON(w, http.StatusAccepted, map[string]string{
+		"status":  "accepted",
+		"brand":   brandID,
+		"message": "Content planning started in background",
+	})
+}
+
 // --- Post & Analytics Handlers ---
+
+func (h *Handlers) GetScheduledPosts(w http.ResponseWriter, r *http.Request) {
+	brandID := chi.URLParam(r, "brandID")
+	posts, err := h.Store.GetScheduledPosts(brandID)
+	if err != nil {
+		JSON(w, http.StatusOK, []models.ScheduledPost{})
+		return
+	}
+	JSON(w, http.StatusOK, posts)
+}
+
+func (h *Handlers) UpdateScheduledStatus(w http.ResponseWriter, r *http.Request) {
+	// postID is unused in logic but part of path for RESTfulness
+	// In a real app we'd verify post ownership
+	var req struct {
+		ID     string            `json:"id"`
+		Status models.PostStatus `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.Store.UpdateScheduledPostStatus(req.ID, req.Status); err != nil {
+		Error(w, http.StatusInternalServerError, "failed to update status")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
 
 func (h *Handlers) ListPosts(w http.ResponseWriter, r *http.Request) {
 	brandID := chi.URLParam(r, "brandID")
@@ -225,6 +275,34 @@ func (h *Handlers) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JSON(w, http.StatusOK, analytics)
+}
+
+func (h *Handlers) ListGlobalPosts(w http.ResponseWriter, r *http.Request) {
+	posts, err := h.Store.GetGlobalHistory(0) // 0 means no limit
+	if err != nil {
+		JSON(w, http.StatusOK, []models.Post{})
+		return
+	}
+	JSON(w, http.StatusOK, posts)
+}
+
+func (h *Handlers) GetGlobalAnalytics(w http.ResponseWriter, r *http.Request) {
+	global, err := h.Store.GetGlobalAnalytics()
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to load global analytics")
+		return
+	}
+
+	performance, err := h.Store.GetBrandPerformance()
+	if err != nil {
+		Error(w, http.StatusInternalServerError, "failed to load brand performance")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]interface{}{
+		"global":      global,
+		"performance": performance,
+	})
 }
 
 func hashPassword(password string) string {

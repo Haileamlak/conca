@@ -79,6 +79,38 @@ func (p *PostgresStore) GetHistory(brandID string) ([]models.Post, error) {
 	return posts, nil
 }
 
+func (p *PostgresStore) GetGlobalHistory(limit int) ([]models.Post, error) {
+	query := `SELECT id, social_id, brand_id, topic, content, platform, status, views, likes, shares, comments, created_at, updated_at 
+	          FROM posts ORDER BY created_at DESC`
+	if limit > 0 {
+		query += fmt.Sprintf(" LIMIT %d", limit)
+	}
+	rows, err := p.pool.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []models.Post
+	for rows.Next() {
+		var post models.Post
+		var status string
+		var socialID sql.NullString
+		err := rows.Scan(
+			&post.ID, &socialID, &post.BrandID, &post.Topic, &post.Content,
+			&post.Platform, &status, &post.Analytics.Views, &post.Analytics.Likes,
+			&post.Analytics.Shares, &post.Analytics.Comments, &post.CreatedAt, &post.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		post.SocialID = socialID.String
+		post.Status = models.PostStatus(status)
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
 func (p *PostgresStore) GetAnalytics(brandID string) ([]models.Analytics, error) {
 	query := `SELECT views, likes, shares, comments FROM posts WHERE brand_id = $1`
 	rows, err := p.pool.Query(context.Background(), query, brandID)
@@ -102,6 +134,52 @@ func (p *PostgresStore) UpdateAnalytics(brandID string, postID string, a models.
 	query := `UPDATE posts SET views = $1, likes = $2, shares = $3, comments = $4, updated_at = $5 WHERE id = $6 AND brand_id = $7`
 	_, err := p.pool.Exec(context.Background(), query, a.Views, a.Likes, a.Shares, a.Comments, time.Now(), postID, brandID)
 	return err
+}
+
+func (p *PostgresStore) GetGlobalAnalytics() (models.GlobalAnalytics, error) {
+	query := `SELECT SUM(views), SUM(likes), SUM(shares), SUM(comments) FROM posts`
+	var global models.GlobalAnalytics
+	err := p.pool.QueryRow(context.Background(), query).Scan(
+		&global.TotalImpressions, &global.TotalLikes, &global.TotalShares, &global.TotalComments,
+	)
+	return global, err
+}
+
+func (p *PostgresStore) GetBrandPerformance() ([]models.BrandPerformance, error) {
+	query := `
+		SELECT 
+			b.id, b.name, 
+			COUNT(p.id) as post_count,
+			COALESCE(AVG(p.likes), 0) as avg_likes,
+			COALESCE(AVG(p.shares), 0) as avg_shares
+		FROM brands b
+		LEFT JOIN posts p ON b.id = p.brand_id
+		GROUP BY b.id, b.name
+	`
+	rows, err := p.pool.Query(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []models.BrandPerformance
+	for rows.Next() {
+		var perf models.BrandPerformance
+		err := rows.Scan(&perf.BrandID, &perf.BrandName, &perf.PostCount, &perf.AvgLikes, &perf.AvgShares)
+		if err != nil {
+			return nil, err
+		}
+
+		// Simple score calculation
+		score := int(perf.AvgLikes*2 + perf.AvgShares*5)
+		if score > 100 {
+			score = 100
+		}
+		perf.Score = score
+
+		results = append(results, perf)
+	}
+	return results, nil
 }
 
 // --- Brand Management ---

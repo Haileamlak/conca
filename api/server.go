@@ -51,6 +51,8 @@ func (s *Server) mountRoutes() {
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		JSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
+	r.Get("/api/analytics", s.Handlers.GetGlobalAnalytics)
+	r.Get("/api/posts", s.Handlers.ListGlobalPosts)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
@@ -67,6 +69,11 @@ func (s *Server) mountRoutes() {
 		r.Post("/api/brands/{brandID}/run", s.Handlers.TriggerRun)
 		r.Post("/api/brands/{brandID}/sync", s.Handlers.TriggerSync)
 
+		// Calendar
+		r.Get("/api/brands/{brandID}/calendar/scheduled", s.Handlers.GetScheduledPosts)
+		r.Patch("/api/brands/{brandID}/calendar/status", s.Handlers.UpdateScheduledStatus)
+		r.Post("/api/brands/{brandID}/calendar/plan", s.Handlers.TriggerPlan)
+
 		// Posts & Analytics
 		r.Get("/api/brands/{brandID}/posts", s.Handlers.ListPosts)
 		r.Get("/api/brands/{brandID}/analytics", s.Handlers.GetAnalytics)
@@ -74,7 +81,7 @@ func (s *Server) mountRoutes() {
 
 	// Static files for Dashboard
 	workDir, _ := os.Getwd()
-	filesDir := http.Dir(filepath.Join(workDir, "web"))
+	filesDir := http.Dir(filepath.Join(workDir, "web", "dist"))
 	FileServer(r, "/", filesDir)
 }
 

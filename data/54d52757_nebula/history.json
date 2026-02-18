@@ -32,5 +32,22 @@
     },
     "created_at": "2026-02-18T08:25:40.80053435+03:00",
     "updated_at": "2026-02-18T08:25:40.800560533+03:00"
+  },
+  {
+    "id": "post-1771430787",
+    "social_id": "",
+    "brand_id": "54d52757_nebula",
+    "topic": "The Rise of Computational Storage: Scaling Enterprise AI Beyond Traditional Data Bottlenecks",
+    "content": "In the race for enterprise AI dominance, the primary constraint is no longer just raw compute power—it is the structural latency of data movement. \n\nAs datasets scale into the petabyte range, traditional architectures are hitting a \"data gravity\" wall. The constant shuttling of information between storage tiers and GPUs creates significant bottlenecks, stifling real-time performance and inflating energy costs.\n\n**Computational Storage** represents the next frontier in infrastructure evolution. By integrating processing capabilities directly into the storage layer, we can filter, compress, and analyze data where it resides. This decentralized approach eliminates the \"von Neumann bottleneck,\" allowing Engineering Leaders to scale LLMs and high-frequency analytics with unprecedented efficiency.\n\nAt Nebula AI, we view this shift as essential for the next generation of sovereign AI. It is no longer enough to have the fastest processors; you must have the most intelligent data fabric. \n\nThe future isn't about moving data to the compute—it’s about bringing the compute to the data.\n\n#NebulaAI #ComputationalStorage #EnterpriseAI #DataArchitecture #CTO #MachineLearning #InfrastructureInnovation",
+    "platform": "LinkedIn/X",
+    "status": "published",
+    "analytics": {
+      "views": 100,
+      "likes": 10,
+      "shares": 2,
+      "comments": 1
+    },
+    "created_at": "2026-02-18T19:06:27.094298988+03:00",
+    "updated_at": "2026-02-18T19:06:27.094338059+03:00"
   }
 ]

@@ -68,6 +68,24 @@ type Analytics struct {
 	Comments int `json:"comments"`
 }
 
+// GlobalAnalytics holds aggregated data across all brands.
+type GlobalAnalytics struct {
+	TotalImpressions int `json:"total_impressions"`
+	TotalLikes       int `json:"total_likes"`
+	TotalShares      int `json:"total_shares"`
+	TotalComments    int `json:"total_comments"`
+}
+
+// BrandPerformance holds performance metrics for a specific brand.
+type BrandPerformance struct {
+	BrandID   string  `json:"brand_id"`
+	BrandName string  `json:"brand_name"`
+	PostCount int     `json:"post_count"`
+	AvgLikes  float64 `json:"avg_likes"`
+	AvgShares float64 `json:"avg_shares"`
+	Score     int     `json:"score"`
+}
+
 // AgentState tracks the current context of the agent loop.
 type AgentState struct {
 	CurrentBrand BrandProfile
