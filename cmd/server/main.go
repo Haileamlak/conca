@@ -45,7 +45,7 @@ func main() {
 		search = ddg
 	}
 
-	llm := tools.NewGeminiClient(geminiKey, "gemini-2.5-flash")
+	llm := tools.NewGeminiClient(geminiKey, "gemini-3-flash-preview")
 	embedding := tools.NewGeminiEmbeddingClient(geminiKey, "gemini-embedding-001")
 
 	// Social

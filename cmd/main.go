@@ -62,7 +62,7 @@ func main() {
 	if geminiKey == "" {
 		log.Fatal("GEMINI_API_KEY environment variable is required.")
 	}
-	llm := tools.NewGeminiClient(geminiKey, "gemini-2.5-flash")
+	llm := tools.NewGeminiClient(geminiKey, "gemini-3-flash-preview")
 	embedding := tools.NewGeminiEmbeddingClient(geminiKey, "gemini-embedding-001")
 
 	// Multi-Social Client
