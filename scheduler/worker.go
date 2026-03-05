@@ -8,8 +8,9 @@ import (
 	"content-creator-agent/tools/logger"
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // AgentFactory creates a new agent for a specific brand.
@@ -110,14 +111,14 @@ func (w *Worker) Process(job *Job) {
 }
 
 // DefaultAgentFactory helper to create the factory.
-func DefaultAgentFactory(store memory.Store, search tools.SearchTool, llm tools.LLMTool, social tools.SocialClient, embedding tools.EmbeddingTool, analytics tools.AnalyticsFetcher, dataDir string) AgentFactory {
+func DefaultAgentFactory(store memory.Store, search tools.SearchTool, llm tools.LLMTool, social tools.SocialClient, embedding tools.EmbeddingTool, analytics tools.AnalyticsFetcher, db *mongo.Database) AgentFactory {
 	return func(brandID string) (*agent.Agent, error) {
 		brand, _, err := store.GetBrand(brandID)
 		if err != nil {
 			return nil, err
 		}
 
-		vectorStore := memory.NewLocalVectorStore(filepath.Join(dataDir, brandID, "vectors.json"))
+		vectorStore := memory.NewMongoVectorStore(db, fmt.Sprintf("vectors_%s", brandID))
 		return agent.NewAgent(brand, search, llm, social, store, vectorStore, embedding, analytics), nil
 	}
 }

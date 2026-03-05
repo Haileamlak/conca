@@ -1,18 +1,18 @@
 package memory
 
 import (
-	"encoding/json"
+	"context"
 	"math"
-	"os"
-	"path/filepath"
-	"sync"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // VectorRecord represents a stored embedding with metadata.
 type VectorRecord struct {
-	ID       string                 `json:"id"`
-	Vector   []float32              `json:"vector"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID       string                 `json:"id" bson:"_id"`
+	Vector   []float32              `json:"vector" bson:"vector"`
+	Metadata map[string]interface{} `json:"metadata" bson:"metadata"`
 }
 
 // SearchResult represents a single match from the vector store.
@@ -29,52 +29,34 @@ type VectorStore interface {
 	UpdateMetadata(id string, metadata map[string]interface{}) error
 }
 
-// LocalVectorStore implements VectorStore using a local JSON file.
-type LocalVectorStore struct {
-	FilePath string
-	records  []VectorRecord
-	mu       sync.RWMutex
+// MongoVectorStore implements VectorStore using MongoDB.
+type MongoVectorStore struct {
+	collection *mongo.Collection
 }
 
-func NewLocalVectorStore(filePath string) *LocalVectorStore {
-	store := &LocalVectorStore{FilePath: filePath}
-	store.load()
-	return store
+func NewMongoVectorStore(db *mongo.Database, collectionName string) *MongoVectorStore {
+	return &MongoVectorStore{collection: db.Collection(collectionName)}
 }
 
-func (l *LocalVectorStore) load() {
-	data, err := os.ReadFile(l.FilePath)
-	if err == nil {
-		json.Unmarshal(data, &l.records)
-	}
+func (m *MongoVectorStore) Add(record VectorRecord) error {
+	_, err := m.collection.InsertOne(context.Background(), record)
+	return err
 }
 
-func (l *LocalVectorStore) save() error {
-	dir := filepath.Dir(l.FilePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(l.records, "", "  ")
+func (m *MongoVectorStore) Query(queryVector []float32, topK int) ([]SearchResult, error) {
+	cursor, err := m.collection.Find(context.Background(), bson.M{})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return os.WriteFile(l.FilePath, data, 0644)
-}
-
-func (l *LocalVectorStore) Add(record VectorRecord) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.records = append(l.records, record)
-	return l.save()
-}
-
-func (l *LocalVectorStore) Query(queryVector []float32, topK int) ([]SearchResult, error) {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
 
 	var results []SearchResult
-	for _, rec := range l.records {
-		score := l.cosineSimilarity(queryVector, rec.Vector)
+	var records []VectorRecord
+	if err := cursor.All(context.Background(), &records); err != nil {
+		return nil, err
+	}
+
+	for _, rec := range records {
+		score := m.cosineSimilarity(queryVector, rec.Vector)
 		results = append(results, SearchResult{
 			ID:       rec.ID,
 			Score:    score,
@@ -82,7 +64,7 @@ func (l *LocalVectorStore) Query(queryVector []float32, topK int) ([]SearchResul
 		})
 	}
 
-	// Sort by score descending (simple bubble-sort-like or use sort.Slice for topK)
+	// Sort by score descending
 	for i := 0; i < len(results); i++ {
 		for j := i + 1; j < len(results); j++ {
 			if results[i].Score < results[j].Score {
@@ -98,7 +80,7 @@ func (l *LocalVectorStore) Query(queryVector []float32, topK int) ([]SearchResul
 	return results, nil
 }
 
-func (l *LocalVectorStore) cosineSimilarity(v1, v2 []float32) float32 {
+func (m *MongoVectorStore) cosineSimilarity(v1, v2 []float32) float32 {
 	if len(v1) != len(v2) {
 		return 0
 	}
@@ -113,24 +95,13 @@ func (l *LocalVectorStore) cosineSimilarity(v1, v2 []float32) float32 {
 	}
 	return float32(dotProduct / (math.Sqrt(normV1) * math.Sqrt(normV2)))
 }
-func (l *LocalVectorStore) UpdateMetadata(id string, metadata map[string]interface{}) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
 
-	found := false
-	for i := range l.records {
-		if l.records[i].ID == id {
-			for k, v := range metadata {
-				l.records[i].Metadata[k] = v
-			}
-			found = true
-			break
-		}
+func (m *MongoVectorStore) UpdateMetadata(id string, metadata map[string]interface{}) error {
+	update := bson.M{"$set": bson.M{}}
+	for k, v := range metadata {
+		update["$set"].(bson.M)["metadata."+k] = v
 	}
 
-	if !found {
-		return os.ErrNotExist
-	}
-
-	return l.save()
+	_, err := m.collection.UpdateOne(context.Background(), bson.M{"_id": id}, update)
+	return err
 }

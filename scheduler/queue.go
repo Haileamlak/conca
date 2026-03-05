@@ -1,10 +1,12 @@
 package scheduler
 
 import (
-	"database/sql"
+	"context"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type JobType string
@@ -26,14 +28,14 @@ const (
 )
 
 type Job struct {
-	ID        int64
-	BrandID   string
-	Type      JobType
-	Status    JobStatus
-	Retries   int
-	NextRunAt time.Time
-	Payload   string // Additional data like ScheduledPostID
-	Error     string
+	ID        int64     `bson:"_id"`
+	BrandID   string    `bson:"brand_id"`
+	Type      JobType   `bson:"type"`
+	Status    JobStatus `bson:"status"`
+	Retries   int       `bson:"retries"`
+	NextRunAt time.Time `bson:"next_run_at"`
+	Payload   string    `bson:"payload"`
+	Error     string    `bson:"error"`
 }
 
 // Queue defines the job management interface
@@ -45,115 +47,98 @@ type Queue interface {
 	HasPendingJob(brandID string) (bool, error)
 }
 
-type SQLiteQueue struct {
-	db *sql.DB
+type MongoQueue struct {
+	collection *mongo.Collection
 }
 
-func NewSQLiteQueue(dbPath string) (*SQLiteQueue, error) {
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create jobs table
-	schema := `
-	CREATE TABLE IF NOT EXISTS jobs (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		brand_id TEXT NOT NULL,
-		type TEXT NOT NULL,
-		status TEXT NOT NULL,
-		retries INTEGER DEFAULT 0,
-		next_run_at DATETIME NOT NULL,
-		payload TEXT,
-		error TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
-	CREATE INDEX IF NOT EXISTS idx_jobs_status_next_run ON jobs(status, next_run_at);
-	`
-	if _, err := db.Exec(schema); err != nil {
-		return nil, err
-	}
-
-	return &SQLiteQueue{db: db}, nil
+func NewMongoQueue(db *mongo.Database) *MongoQueue {
+	return &MongoQueue{collection: db.Collection("jobs")}
 }
 
-func (q *SQLiteQueue) Enqueue(brandID string, jobType JobType, delay time.Duration, payload string) error {
+func (q *MongoQueue) Enqueue(brandID string, jobType JobType, delay time.Duration, payload string) error {
 	nextRun := time.Now().Add(delay)
-	query := `INSERT INTO jobs (brand_id, type, status, next_run_at, payload) VALUES (?, ?, ?, ?, ?)`
-	_, err := q.db.Exec(query, brandID, string(jobType), string(StatusPending), nextRun, payload)
+	job := bson.M{
+		"_id":         time.Now().UnixNano(), // Simple unique ID
+		"brand_id":    brandID,
+		"type":        string(jobType),
+		"status":      string(StatusPending),
+		"retries":     0,
+		"next_run_at": nextRun,
+		"payload":     payload,
+		"error":       "",
+		"created_at":  time.Now(),
+		"updated_at":  time.Now(),
+	}
+	_, err := q.collection.InsertOne(context.Background(), job)
 	return err
 }
 
-func (q *SQLiteQueue) Dequeue() (*Job, error) {
-	tx, err := q.db.Begin()
-	if err != nil {
-		return nil, err
+func (q *MongoQueue) Dequeue() (*Job, error) {
+	filter := bson.M{
+		"status":      string(StatusPending),
+		"next_run_at": bson.M{"$lte": time.Now()},
 	}
-	defer tx.Rollback()
+	update := bson.M{
+		"$set": bson.M{
+			"status":     string(StatusRunning),
+			"updated_at": time.Now(),
+		},
+	}
+	opts := options.FindOneAndUpdate().SetSort(bson.D{{Key: "next_run_at", Value: 1}}).SetReturnDocument(options.After)
 
-	query := `
-		SELECT id, brand_id, type, status, retries, next_run_at, payload, error 
-		FROM jobs 
-		WHERE status = ? AND next_run_at <= ? 
-		ORDER BY next_run_at ASC 
-		LIMIT 1
-	`
 	var job Job
-	var jobType, status string
-	var payload, errStr sql.NullString
-	err = tx.QueryRow(query, string(StatusPending), time.Now()).Scan(
-		&job.ID, &job.BrandID, &jobType, &status, &job.Retries, &job.NextRunAt, &payload, &errStr,
-	)
-
-	if err == sql.ErrNoRows {
+	err := q.collection.FindOneAndUpdate(context.Background(), filter, update, opts).Decode(&job)
+	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	job.Type = JobType(jobType)
-	job.Status = StatusRunning
-	job.Payload = payload.String
-	job.Error = errStr.String
-
-	// Update status to running
-	updateQuery := `UPDATE jobs SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-	if _, err := tx.Exec(updateQuery, string(StatusRunning), job.ID); err != nil {
-		return nil, err
-	}
-
-	return &job, tx.Commit()
+	return &job, nil
 }
 
-func (q *SQLiteQueue) Ack(jobID int64) error {
-	query := `DELETE FROM jobs WHERE id = ?`
-	_, err := q.db.Exec(query, jobID)
+func (q *MongoQueue) Ack(jobID int64) error {
+	_, err := q.collection.DeleteOne(context.Background(), bson.M{"_id": jobID})
 	return err
 }
 
-func (q *SQLiteQueue) Fail(jobID int64, errMsg string, retry bool) error {
+func (q *MongoQueue) Fail(jobID int64, errMsg string, retry bool) error {
 	if retry {
-		// Backoff: 5m, 15m, 1h, 4h...
 		delay := 5 * time.Minute
-		query := `UPDATE jobs SET status = ?, retries = retries + 1, next_run_at = ?, error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-		_, err := q.db.Exec(query, string(StatusPending), time.Now().Add(delay), errMsg, jobID)
+		update := bson.M{
+			"$set": bson.M{
+				"status":      string(StatusPending),
+				"next_run_at": time.Now().Add(delay),
+				"error":       errMsg,
+				"updated_at":  time.Now(),
+			},
+			"$inc": bson.M{"retries": 1},
+		}
+		_, err := q.collection.UpdateOne(context.Background(), bson.M{"_id": jobID}, update)
 		return err
 	}
 
-	query := `UPDATE jobs SET status = ?, error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-	_, err := q.db.Exec(query, string(StatusFailed), errMsg, jobID)
+	update := bson.M{
+		"$set": bson.M{
+			"status":     string(StatusFailed),
+			"error":      errMsg,
+			"updated_at": time.Now(),
+		},
+	}
+	_, err := q.collection.UpdateOne(context.Background(), bson.M{"_id": jobID}, update)
 	return err
 }
 
-func (q *SQLiteQueue) HasPendingJob(brandID string) (bool, error) {
-	query := `SELECT COUNT(*) FROM jobs WHERE brand_id = ? AND status IN (?, ?)`
-	var count int
-	err := q.db.QueryRow(query, brandID, string(StatusPending), string(StatusRunning)).Scan(&count)
+func (q *MongoQueue) HasPendingJob(brandID string) (bool, error) {
+	filter := bson.M{
+		"brand_id": brandID,
+		"status":   bson.M{"$in": []string{string(StatusPending), string(StatusRunning)}},
+	}
+	count, err := q.collection.CountDocuments(context.Background(), filter)
 	return count > 0, err
 }
 
-func (q *SQLiteQueue) Close() error {
-	return q.db.Close()
+func (q *MongoQueue) Close() error {
+	return nil
 }

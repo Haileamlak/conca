@@ -10,14 +10,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	port := flag.String("port", "8080", "Port to listen on")
+	port := flag.String("port", "8000", "Port to listen on")
 	dataDir := flag.String("data", "data", "Data directory")
 	flag.Parse()
 
@@ -75,21 +74,26 @@ func main() {
 		social.AddClient("mock", &tools.MockSocialClient{Platform: "Mock"})
 	}
 
-	// --- Database Selection ---
-	var store memory.Store
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL != "" {
-		pgStore, err := memory.NewPostgresStore(dbURL)
-		if err != nil {
-			log.Fatalf("Failed to connect to PostgreSQL: %v", err)
-		}
-		defer pgStore.Close()
-		store = pgStore
-		fmt.Println("✅ Using PostgreSQL database for storage.")
-	} else {
-		store = memory.NewFileStore(*dataDir)
-		fmt.Println("📁 Using local JSON files for storage (no DATABASE_URL set).")
+	// --- DatabaseSelection & Setup ---
+	var store *memory.MongoStore
+	mongoURI := os.Getenv("MONGODB_URI")
+	mongoDB := os.Getenv("MONGODB_DB")
+	if mongoDB == "" {
+		mongoDB = "conca"
 	}
+
+	if mongoURI == "" {
+		fmt.Println("WARNING: MONGODB_URI not set. Attempting to connect to localhost:27017")
+		mongoURI = "mongodb://localhost:27017"
+	}
+
+	mStore, err := memory.NewMongoStore(mongoURI, mongoDB)
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+	defer mStore.Close()
+	store = mStore
+	fmt.Printf("🍃 Using MongoDB database (%s) for storage.\n", mongoDB)
 
 	// --- JWT Secret ---
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -99,13 +103,9 @@ func main() {
 	}
 
 	// --- Job Queue & Workers ---
-	queue, err := scheduler.NewSQLiteQueue(filepath.Join(*dataDir, "jobs.db"))
-	if err != nil {
-		log.Fatalf("Failed to initialize job queue: %v", err)
-	}
-	defer queue.Close()
+	queue := scheduler.NewMongoQueue(mStore.Database())
 
-	factory := scheduler.DefaultAgentFactory(store, search, llm, social, embedding, analytics, *dataDir)
+	factory := scheduler.DefaultAgentFactory(store, search, llm, social, embedding, analytics, mStore.Database())
 	worker := scheduler.NewWorker(queue, factory)
 	go worker.Start(context.Background())
 

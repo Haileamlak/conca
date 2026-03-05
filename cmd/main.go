@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -88,25 +87,26 @@ func main() {
 	}
 
 	// --- Database Selection ---
-	var store memory.Store
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL != "" {
-		pgStore, err := memory.NewPostgresStore(dbURL)
-		if err != nil {
-			log.Fatalf("Failed to connect to PostgreSQL: %v", err)
-		}
-		defer pgStore.Close()
-		store = pgStore
-		fmt.Println("✅ CLI using PostgreSQL database.")
-	} else {
-		store = memory.NewFileStore("data")
-		fmt.Println("📁 CLI using local JSON files.")
+	mongoURI := os.Getenv("MONGODB_URI")
+	mongoDB := os.Getenv("MONGODB_DB")
+	if mongoDB == "" {
+		mongoDB = "conca"
+	}
+	if mongoURI == "" {
+		mongoURI = "mongodb://localhost:27017"
 	}
 
-	vector := memory.NewLocalVectorStore(filepath.Join("data", brand.ID, "vectors.json"))
+	mStore, err := memory.NewMongoStore(mongoURI, mongoDB)
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+	defer mStore.Close()
+	fmt.Printf("🍃 CLI using MongoDB database (%s).\n", mongoDB)
+
+	vector := memory.NewMongoVectorStore(mStore.Database(), fmt.Sprintf("vectors_%s", brand.ID))
 
 	// 3. Initialize Agent
-	creator := agent.NewAgent(brand, search, llm, social, store, vector, embedding, analytics)
+	creator := agent.NewAgent(brand, search, llm, social, mStore, vector, embedding, analytics)
 
 	// 4. Run Logic
 	if *syncOnly {

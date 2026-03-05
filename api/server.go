@@ -55,6 +55,7 @@ func (s *Server) mountRoutes() {
 		r.Use(s.AuthMiddleware)
 
 		r.Get("/api/auth/me", s.Handlers.GetMe)
+		r.Get("/api/system/status", s.Handlers.GetSystemStatus)
 		r.Get("/api/analytics", s.Handlers.GetGlobalAnalytics)
 		r.Get("/api/posts", s.Handlers.ListGlobalPosts)
 

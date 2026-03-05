@@ -3,23 +3,15 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Database, Key, Globe, Brain, BarChart2, CheckCircle2, Circle, User, LogOut } from "lucide-react";
+import { User, LogOut, Bell, Shield, CreditCard, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
-
-const integrations = [
-  { name: "Gemini API", desc: "LLM + Embeddings for content generation and semantic memory", icon: Brain, status: "connected", key: "AIza••••••••••••••••••••Xk9" },
-  { name: "NewsAPI", desc: "Real-time news and trend discovery", icon: Globe, status: "connected", key: "••••••••••••••••••••a2f1" },
-  { name: "Twitter / X API v2", desc: "Post publishing and analytics sync", icon: Globe, status: "connected", key: "••••••••••••••••••••AAAB" },
-  { name: "LinkedIn API", desc: "ugcPosts publishing endpoint", icon: Globe, status: "disconnected", key: "" },
-  { name: "NewsData.io", desc: "Secondary trend research source", icon: Globe, status: "disconnected", key: "" },
-  { name: "PostgreSQL", desc: "Primary relational store (optional, falls back to JSON)", icon: Database, status: "disconnected", key: "" },
-];
 
 export default function Settings() {
   const [user, setUser] = useState<{ id: string, email: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchData = async () => {
       try {
         const res = await api.get("/auth/me");
         if (res.ok) {
@@ -27,162 +19,105 @@ export default function Settings() {
           setUser(data);
         }
       } catch (err) {
-        console.error("Failed to fetch user", err);
+        console.error("Failed to fetch user data", err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchUser();
+    fetchData();
   }, []);
 
   return (
-    <Layout title="Settings" subtitle="Configure integrations, API keys, and agent behavior">
+    <Layout title="Settings" subtitle="Manage your account preferences and profile">
       <div className="max-w-3xl space-y-6">
-        {/* Account Info */}
+        {/* Profile Section */}
         <div className="card-glass rounded-xl overflow-hidden animate-fade-in">
           <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <User className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-              Account Information
+              Profile Settings
             </h3>
           </div>
-          <div className="p-5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: "hsl(var(--primary) / 0.15)", color: "hsl(var(--primary))" }}>
-              {user?.email?.[0].toUpperCase() || "A"}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{user?.email || "Loading..."}</p>
-              <p className="text-xs text-muted-foreground font-mono">User ID: {user?.id || "..."}</p>
-            </div>
-            <Button variant="outline" size="sm" className="ml-auto gap-2 border-border text-xs" onClick={() => { localStorage.removeItem("conca_token"); window.location.href = "/auth"; }}>
-              <LogOut className="w-3.5 h-3.5" /> Logout
-            </Button>
-          </div>
-        </div>
-
-        {/* API Config */}
-        <div className="card-glass rounded-xl overflow-hidden">
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Key className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-              API Server Configuration
-            </h3>
-          </div>
-          <div className="p-5 grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Server Port</Label>
-              <Input defaultValue="8080" className="font-mono text-sm h-9 bg-secondary border-border" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>JWT Secret</Label>
-              <Input type="password" defaultValue="supersecret" className="font-mono text-sm h-9 bg-secondary border-border" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Data Directory</Label>
-              <Input defaultValue="./data" className="font-mono text-sm h-9 bg-secondary border-border" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Default Interval (hours)</Label>
-              <Input type="number" defaultValue={4} className="font-mono text-sm h-9 bg-secondary border-border" />
-            </div>
-          </div>
-          <div className="px-5 pb-5">
-            <Button className="text-xs h-8 px-4" style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}>
-              Save Configuration
-            </Button>
-          </div>
-        </div>
-
-        {/* Integrations */}
-        <div className="card-glass rounded-xl overflow-hidden">
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Globe className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-              Integrations
-            </h3>
-          </div>
-          <div className="divide-y" style={{ borderColor: "hsl(var(--border))" }}>
-            {integrations.map((intg) => (
-              <div key={intg.name} className="flex items-center gap-4 px-5 py-4">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "hsl(var(--secondary))" }}>
-                  <intg.icon className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+          <div className="p-6">
+            <div className="flex items-center gap-6 mb-8">
+              <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold relative group overflow-hidden" style={{ background: "hsl(var(--primary) / 0.1)", color: "hsl(var(--primary))", border: "1px solid hsl(var(--primary) / 0.2)" }}>
+                {user?.email?.[0].toUpperCase() || "A"}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                  <p className="text-[10px] text-white font-bold uppercase tracking-widest">Change</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-medium">{intg.name}</p>
-                    {intg.status === "connected"
-                      ? <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "hsl(var(--success))" }} />
-                      : <Circle className="w-3.5 h-3.5" style={{ color: "hsl(var(--muted-foreground))" }} />
-                    }
+              </div>
+              <div className="flex-1">
+                <h4 className="text-lg font-bold text-foreground mb-1">{user?.email?.split('@')[0] || "User Name"}</h4>
+                <p className="text-sm text-muted-foreground mb-3">{user?.email}</p>
+                <div className="flex gap-2">
+                  <div className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                    Pro Plan
                   </div>
-                  <p className="text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>{intg.desc}</p>
-                  {intg.key && <p className="text-xs font-mono mt-1" style={{ color: "hsl(var(--primary) / 0.7)" }}>{intg.key}</p>}
+                  <div className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-secondary text-muted-foreground border border-border">
+                    Verified
+                  </div>
                 </div>
-                {intg.status === "connected"
-                  ? <Button size="sm" variant="outline" className="text-xs h-7 px-3 border-border">Update Key</Button>
-                  : <Button size="sm" className="text-xs h-7 px-3" style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}>Connect</Button>
-                }
               </div>
-            ))}
+              <Button variant="outline" size="sm" className="gap-2 border-border text-xs rounded-lg px-4" onClick={() => { localStorage.removeItem("conca_token"); window.location.href = "/auth"; }}>
+                <LogOut className="w-3.5 h-3.5" /> Sign Out
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground">Email Address</Label>
+                <Input value={user?.email || ""} readOnly className="bg-secondary/50 border-border h-10" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground">Account Status</Label>
+                <Input value="Active Premium" readOnly className="bg-secondary/50 border-border h-10 text-success font-bold" />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Agent settings */}
+        {/* Global Preferences */}
         <div className="card-glass rounded-xl overflow-hidden">
           <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
             <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Brain className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-              Agent Behavior
+              <Sparkles className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+              Content Processing
             </h3>
           </div>
-          <div className="p-5 grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Content Model</Label>
-              <select className="w-full text-xs font-mono px-3 py-2 rounded-lg border h-9" style={{ background: "hsl(var(--secondary))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}>
-                <option>gemini-1.5-pro</option>
-                <option>gemini-1.5-flash</option>
-                <option>gemini-2.0-pro</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Embedding Model</Label>
-              <select className="w-full text-xs font-mono px-3 py-2 rounded-lg border h-9" style={{ background: "hsl(var(--secondary))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}>
-                <option>text-embedding-004</option>
-                <option>text-embedding-005</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Max Trends Per Cycle</Label>
-              <Input type="number" defaultValue={10} className="font-mono text-sm h-9 bg-secondary border-border" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Content Variants Per Trend</Label>
-              <Input type="number" defaultValue={3} className="font-mono text-sm h-9 bg-secondary border-border" />
-            </div>
-          </div>
-          <div className="px-5 pb-5">
-            <Button className="text-xs h-8 px-4" style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}>
-              Save Agent Config
-            </Button>
-          </div>
-        </div>
-
-        {/* CLI Quick Reference */}
-        <div className="card-glass rounded-xl p-5">
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <BarChart2 className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-            CLI Quick Reference
-          </h3>
-          <div className="space-y-2">
+          <div className="p-6 space-y-4">
             {[
-              { cmd: "go run cmd/server/main.go --port 8080", desc: "Start SaaS API server" },
-              { cmd: "go run cmd/main.go --config config/brand.json --daemon --interval 4h", desc: "Run daemon mode" },
-              { cmd: "go run cmd/main.go --sync", desc: "Sync analytics from all platforms" },
-            ].map((c) => (
-              <div key={c.cmd} className="p-3 rounded-lg" style={{ background: "hsl(var(--secondary))" }}>
-                <p className="text-xs font-mono" style={{ color: "hsl(var(--primary))" }}>$ {c.cmd}</p>
-                <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>{c.desc}</p>
+              { icon: Bell, title: "Smart Notifications", desc: "Get alerted when top trends align with your brand voice" },
+              { icon: Shield, title: "Brand Protection", desc: "Rigorous filtering for sensitive topics and controversial trends" },
+              { icon: CreditCard, title: "Usage & Billing", desc: "Manage your subscription plan and view monthly usage" }
+            ].map((item) => (
+              <div key={item.title} className="flex items-center gap-4 p-4 rounded-xl hover:bg-secondary/30 transition-colors cursor-pointer border border-transparent hover:border-border">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-secondary">
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+                <div className="w-10 h-6 rounded-full bg-primary/20 p-1 flex items-center justify-end">
+                  <div className="w-4 h-4 rounded-full bg-primary" />
+                </div>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Newsletter / Updates */}
+        <div className="card-glass rounded-xl p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+            <Sparkles className="w-24 h-24 text-primary" />
+          </div>
+          <h3 className="text-sm font-bold mb-2">Conca AI Intelligence</h3>
+          <p className="text-xs text-muted-foreground mb-4 max-w-md leading-relaxed">
+            Get weekly reports on how our AI is evolving to better serve your brand goals. We constantly update our underlying semantic models to improve trend accuracy by 40%+.
+          </p>
+          <Button variant="outline" className="text-xs h-9 px-6 border-primary/30 text-primary hover:bg-primary/5">
+            View Release Notes
+          </Button>
         </div>
       </div>
     </Layout>

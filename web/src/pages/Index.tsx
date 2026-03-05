@@ -117,10 +117,10 @@ export default function Dashboard() {
       actions={
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="gap-2 font-mono text-xs border-border" onClick={handleSyncAll}>
-            <RefreshCw className="w-3.5 h-3.5" /> Sync All
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Insights
           </Button>
           <Button size="sm" className="gap-2 font-mono text-xs" style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }} onClick={handleRunAll}>
-            <Play className="w-3.5 h-3.5" /> Run Agent (All)
+            <Zap className="w-3.5 h-3.5" /> Optimize Brands
           </Button>
         </div>
       }
@@ -204,21 +204,21 @@ export default function Dashboard() {
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full status-pulse" style={{ background: "hsl(var(--success))" }} />
-                Agent Log
+                Platform Activity stream
               </h2>
               <span className="text-xs font-mono" style={{ color: "hsl(var(--muted-foreground))" }}>Live</span>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 font-mono text-[10px] space-y-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {logs.slice().reverse().map((log, i) => (
-                <div key={i} className="flex gap-2 animate-fade-in border-b border-border/10 pb-1.5 last:border-0">
-                  <span className="text-muted-foreground whitespace-nowrap">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
-                  <span className={log.level === "ERROR" ? "text-destructive" : log.level === "WARN" ? "text-warning" : "text-primary"} style={{ minWidth: "40px" }}>
-                    {log.level}:
-                  </span>
-                  <span className="text-foreground/90 leading-normal">{log.message}</span>
+                <div key={i} className="flex gap-3 animate-fade-in border-b border-border/10 pb-2 last:border-0">
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${log.level === 'ERROR' ? 'bg-destructive' : 'bg-primary'}`} />
+                  <div className="flex-1">
+                    <p className="text-[11px] leading-relaxed text-foreground/90">{log.message}</p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                  </div>
                 </div>
               ))}
-              {logs.length === 0 && <div className="text-muted-foreground">Waiting for agent activity...</div>}
+              {logs.length === 0 && <div className="text-muted-foreground text-xs text-center py-10">Waiting for brand activity...</div>}
             </div>
           </div>
 

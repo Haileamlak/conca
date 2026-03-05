@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -102,22 +102,32 @@
   }
 
   @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.3;
+    }
   }
 
   .scan-line {
-    background: linear-gradient(
-      transparent 0%,
-      hsl(183 100% 45% / 0.05) 50%,
-      transparent 100%
-    );
+    background: linear-gradient(transparent 0%,
+        hsl(183 100% 45% / 0.05) 50%,
+        transparent 100%);
     animation: scan 4s linear infinite;
   }
 
   @keyframes scan {
-    from { transform: translateY(-100%); }
-    to { transform: translateY(100vh); }
+    from {
+      transform: translateY(-100%);
+    }
+
+    to {
+      transform: translateY(100vh);
+    }
   }
 
   .sidebar-item {

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Twitter, Linkedin, Play, RefreshCw, X, Layers } from "lucide-react";
+import { Plus, Twitter, Linkedin, Zap, RefreshCw, X, Layers } from "lucide-react";
 
 interface Brand {
   id: string;
@@ -60,10 +60,10 @@ function BrandCard({ brand, onRun, onSync }: { brand: Brand; onRun: () => void; 
 
       <div className="flex gap-2 mt-4 pt-4" style={{ borderTop: "1px solid hsl(var(--border))" }}>
         <Button size="sm" variant="outline" className="flex-1 gap-1.5 text-xs h-8 border-border" onClick={onRun}>
-          <Play className="w-3 h-3" /> Run Now
+          <Zap className="w-3 h-3 text-primary" /> Initiate
         </Button>
         <Button size="sm" variant="outline" className="flex-1 gap-1.5 text-xs h-8 border-border" onClick={onSync}>
-          <RefreshCw className="w-3 h-3" /> Sync
+          <RefreshCw className="w-3 h-3" /> Refresh
         </Button>
       </div>
     </div>
@@ -72,7 +72,6 @@ function BrandCard({ brand, onRun, onSync }: { brand: Brand; onRun: () => void; 
 
 function CreateBrandModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [formData, setFormData] = useState({
-    id: "",
     name: "",
     industry: "",
     voice: "",
@@ -84,20 +83,32 @@ function CreateBrandModal({ onClose, onSuccess }: { onClose: () => void; onSucce
   const { toast } = useToast();
 
   const handleCreate = async () => {
+    if (!formData.name) {
+      toast({ title: "Name Required", description: "Please enter a name for your brand.", variant: "destructive" });
+      return;
+    }
+
+    // Auto-generate ID from name
+    const generatedId = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
     try {
       const res = await api.post("/brands", {
-        ...formData,
+        id: generatedId,
+        name: formData.name,
+        industry: formData.industry,
+        voice: formData.voice,
+        target_audience: formData.target_audience,
         topics: formData.topics.split(",").map(s => s.trim()).filter(s => s),
         anti_topics: formData.anti_topics.split(",").map(s => s.trim()).filter(s => s),
         schedule_interval_hours: Number(formData.schedule_interval_hours)
       });
 
       if (res.ok) {
-        toast({ title: "Brand Created", description: `Profile for ${formData.name} is now active.` });
+        toast({ title: "Brand Identity Created", description: `${formData.name} is now being monitored.` });
         onSuccess();
         onClose();
       } else {
-        toast({ title: "Error", description: "Failed to create brand profile.", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to create brand identity.", variant: "destructive" });
       }
     } catch (error) {
       toast({ title: "Error", description: "Network error.", variant: "destructive" });
@@ -107,54 +118,56 @@ function CreateBrandModal({ onClose, onSuccess }: { onClose: () => void; onSucce
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center font-sans" style={{ background: "hsl(var(--background) / 0.8)", backdropFilter: "blur(4px)" }}>
       <div className="w-full max-w-lg rounded-2xl p-6 animate-fade-in shadow-2xl" style={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-base font-semibold">Create Brand Identity</h2>
-          <Button variant="ghost" size="sm" className="w-7 h-7 p-0" onClick={onClose}><X className="w-4 h-4" /></Button>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-lg font-bold">New Brand Identity</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Define how our AI should represent your brand.</p>
+          </div>
+          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 rounded-full" onClick={onClose}><X className="w-4 h-4" /></Button>
         </div>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Brand ID *</Label>
-              <Input placeholder="tech_startup" className="font-mono text-sm h-9 bg-secondary border-border" value={formData.id} onChange={e => setFormData({ ...formData, id: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Name *</Label>
-              <Input placeholder="TechVision" className="text-sm h-9 bg-secondary border-border" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Industry</Label>
-              <Input placeholder="Technology" className="text-sm h-9 bg-secondary border-border" value={formData.industry} onChange={e => setFormData({ ...formData, industry: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Brand Voice</Label>
-              <Input placeholder="Professional, Witty..." className="text-sm h-9 bg-secondary border-border" value={formData.voice} onChange={e => setFormData({ ...formData, voice: e.target.value })} />
-            </div>
-          </div>
+
+        <div className="space-y-5">
           <div className="space-y-1.5">
-            <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Target Audience</Label>
-            <Input placeholder="CTOs, Senior Engineers" className="text-sm h-9 bg-secondary border-border" value={formData.target_audience} onChange={e => setFormData({ ...formData, target_audience: e.target.value })} />
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-primary">Brand Name *</Label>
+            <Input placeholder="e.g. TechVision Labs" className="h-10 bg-secondary/50 border-border" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Topics (comma-sep)</Label>
-              <Input placeholder="AI, Cloud, DevOps" className="text-sm h-9 bg-secondary border-border" value={formData.topics} onChange={e => setFormData({ ...formData, topics: e.target.value })} />
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Industry</Label>
+              <Input placeholder="Software, Fashion..." className="h-10 bg-secondary/50 border-border" value={formData.industry} onChange={e => setFormData({ ...formData, industry: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Anti-Topics</Label>
-              <Input placeholder="Politics, Sports" className="text-sm h-9 bg-secondary border-border" value={formData.anti_topics} onChange={e => setFormData({ ...formData, anti_topics: e.target.value })} />
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Brand Voice</Label>
+              <Input placeholder="Witty, Bold, Clean..." className="h-10 bg-secondary/50 border-border" value={formData.voice} onChange={e => setFormData({ ...formData, voice: e.target.value })} />
             </div>
           </div>
+
           <div className="space-y-1.5">
-            <Label className="text-xs font-mono uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>Schedule Interval (hours)</Label>
-            <Input type="number" placeholder="4" value={formData.schedule_interval_hours} onChange={e => setFormData({ ...formData, schedule_interval_hours: Number(e.target.value) })} className="font-mono text-sm h-9 bg-secondary border-border" />
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Target Audience</Label>
+            <Input placeholder="Who is this for?" className="h-10 bg-secondary/50 border-border" value={formData.target_audience} onChange={e => setFormData({ ...formData, target_audience: e.target.value })} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Core Topics to Monitor</Label>
+            <Input placeholder="Topic 1, Topic 2, Topic 3" className="h-10 bg-secondary/50 border-border" value={formData.topics} onChange={e => setFormData({ ...formData, topics: e.target.value })} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Avoid These Subjects</Label>
+            <Input placeholder="Politics, Controversies..." className="h-10 bg-secondary/50 border-border" value={formData.anti_topics} onChange={e => setFormData({ ...formData, anti_topics: e.target.value })} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Optimization Interval (hours)</Label>
+            <Input type="number" value={formData.schedule_interval_hours} onChange={e => setFormData({ ...formData, schedule_interval_hours: Number(e.target.value) })} className="h-10 bg-secondary/50 border-border" />
           </div>
         </div>
-        <div className="flex gap-3 mt-6">
-          <Button variant="outline" className="flex-1 border-border" onClick={onClose}>Cancel</Button>
-          <Button className="flex-1" style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }} onClick={handleCreate}>
-            Create Brand Profile
+
+        <div className="flex gap-3 mt-8">
+          <Button variant="outline" className="flex-1 border-border h-11" onClick={onClose}>Discard</Button>
+          <Button className="flex-1 h-11 shadow-lg shadow-primary/20" style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }} onClick={handleCreate}>
+            Initialize Identity
           </Button>
         </div>
       </div>
@@ -230,27 +243,6 @@ export default function Brands() {
           )}
         </div>
 
-        {/* API Reference */}
-        <div className="mt-8 card-glass rounded-xl p-5">
-          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <Layers className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-            Operational Endpoints
-          </h3>
-          <div className="space-y-2 font-mono text-[10px] sm:text-xs">
-            {[
-              { method: "POST", path: "/api/brands", desc: "Define agent identity" },
-              { method: "POST", path: "/api/brands/{id}/run", desc: "Force generation cycle" },
-              { method: "POST", path: "/api/brands/{id}/sync", desc: "Refresh social metrics" },
-              { method: "GET", path: "/api/brands/{id}/posts", desc: "View brand history" },
-            ].map((ep) => (
-              <div key={ep.path} className="flex items-center gap-3 py-2 px-3 rounded-lg" style={{ background: "hsl(var(--secondary))" }}>
-                <span className="w-14 text-center rounded px-1 py-0.5 text-[10px] sm:text-xs" style={{ background: "hsl(var(--primary) / 0.15)", color: "hsl(var(--primary))" }}>{ep.method}</span>
-                <span className="truncate" style={{ color: "hsl(var(--foreground))" }}>{ep.path}</span>
-                <span style={{ color: "hsl(var(--muted-foreground))" }} className="ml-auto hidden sm:inline">{ep.desc}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </Layout>
 
       {showCreate && <CreateBrandModal onClose={() => setShowCreate(false)} onSuccess={fetchBrands} />}
