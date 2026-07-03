@@ -6,7 +6,7 @@
 
 ---
 
-## 🚀 Key Capabilities
+## Key Capabilities
 
 - **Autonomous Agent Loop**: Continuous research and generation cycles powered by Gemini LLM.
 - **Interactive Mission Control**: A stunning real-time dashboard to monitor **live agent logs** and global performance metrics.
@@ -20,7 +20,7 @@
 
 ---
 
-## 🛠 High-Level Architecture
+## High-Level Architecture
 
 Conca is built with a pragmatic, full-stack architecture:
 
@@ -32,7 +32,7 @@ Conca is built with a pragmatic, full-stack architecture:
 
 ---
 
-## ⚡️ Getting Started
+## Getting Started
 
 ### 1. Prerequisites
 - **Go 1.21+**
@@ -72,7 +72,7 @@ The platform will be available at **`http://localhost:8080`**.
 
 ---
 
-## 📡 Operational Endpoints
+## Operational Endpoints
 
 The system exposes a clean REST API for external integrations:
 
@@ -84,5 +84,5 @@ The system exposes a clean REST API for external integrations:
 
 ---
 
-## 📜 License
+## License
 MIT License - see [LICENSE](LICENSE) for details.
